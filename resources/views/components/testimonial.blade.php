@@ -1,0 +1,2 @@
+@props(['review'])
+<article class="testimonial-card"><div class="quote-mark" aria-hidden="true">“</div><blockquote>{{ $review->text('quote') }}</blockquote><div class="review-footer"><span class="avatar-initial">{{ mb_substr($review->client_name,0,1) }}</span><div><strong>{{ $review->client_name }}</strong><small>{{ $review->text('client_company') }}</small></div><span class="review-stars" aria-label="{{ $review->rating }} / 5">{{ str_repeat('★',$review->rating) }}</span></div></article>

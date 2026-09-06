@@ -1,0 +1,2 @@
+@php($logo=\App\Models\Asset::find(\App\Support\Studio::setting(request()->is('admin/login')?'login.logo':'general.logo_light')))
+<div class="studio-admin-brand">@if($logo)<img src="{{ $logo->imageUrl(320) }}" alt="Islam Web Studio" width="120" height="48">@else<img src="{{ asset('brand/logo-reference.jpeg') }}" width="44" height="44" alt=""><span>Islam Web Studio<small>DIGITAL SOLUTIONS</small></span>@endif</div>

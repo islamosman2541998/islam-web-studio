@@ -1,0 +1,1 @@
+<x-filament-panels::page><form wire:submit="save" class="space-y-6">{{ $this->form }}<x-filament::button type="submit" wire:loading.attr="disabled">{{ \App\Support\Studio::text('save_settings') }}</x-filament::button><span wire:loading wire:target="save">{{ \App\Support\Studio::text('saving') }}</span></form></x-filament-panels::page>

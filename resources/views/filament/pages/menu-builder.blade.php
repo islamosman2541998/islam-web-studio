@@ -1,0 +1,4 @@
+<x-filament-panels::page>
+<div class="studio-builder-head"><p>{{ \App\Support\Studio::text('menu_help') }}</p><label>{{ \App\Support\Studio::text('field_menu_location_id') }}<select wire:model.live="location" class="studio-select">@foreach(\App\Models\MenuLocation::all() as $place)<option value="{{ $place->id }}">{{ $place->titleText() }}</option>@endforeach</select></label><a class="studio-admin-link" href="{{ \App\Filament\Resources\MenuItems\MenuItemResource::getUrl('create') }}">+ {{ \App\Support\Studio::text('add_item') }}</a></div>
+<div wire:key="tree-{{ $location }}" x-data="menuTree" class="studio-tree-shell"><div class="studio-menu-tree" data-menu-tree>@include('filament.pages.menu-branch',['items'=>$this->items(),'parent'=>null])</div><x-filament::button x-on:click="save($wire)">{{ \App\Support\Studio::text('save_order') }}</x-filament::button></div>
+</x-filament-panels::page>

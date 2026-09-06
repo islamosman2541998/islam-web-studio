@@ -1,0 +1,1 @@
+<div class="studio-login-footer">@include('filament.locale') @if(\App\Support\Studio::setting('login.show_site_link',true))<small>{{ \App\Support\Studio::translated('general.tagline') }}</small>@endif</div>

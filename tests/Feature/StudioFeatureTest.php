@@ -1,0 +1,784 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Filament\Pages\MenuBuilder;
+use App\Filament\Pages\StudioSettings;
+use App\Filament\Resources\Assets\AssetResource;
+use App\Filament\Resources\Posts\PostResource;
+use App\Filament\Resources\Projects\ProjectResource;
+use App\Filament\Resources\Services\Pages\CreateRecord;
+use App\Filament\Resources\Services\Pages\EditRecord;
+use App\Filament\Resources\Services\Pages\ListRecords;
+use App\Filament\Resources\Services\ServiceResource;
+use App\Filament\Resources\Slides\Pages\CreateRecord as CreateSlideRecord;
+use App\Jobs\BuildExport;
+use App\Livewire\BrowseContent;
+use App\Livewire\QuoteForm;
+use App\Models\Asset;
+use App\Models\ExportRun;
+use App\Models\Lead;
+use App\Models\MenuItem;
+use App\Models\MenuLocation;
+use App\Models\Page;
+use App\Models\Post;
+use App\Models\PostCategory;
+use App\Models\Project;
+use App\Models\ProjectCategory;
+use App\Models\ProjectMedia;
+use App\Models\Role;
+use App\Models\Service;
+use App\Models\ServiceCategory;
+use App\Models\Slider;
+use App\Models\Testimonial;
+use App\Models\User;
+use App\Support\FontRegistry;
+use App\Support\MediaPicker;
+use App\Support\MediaPipeline;
+use App\Support\MenuResolver;
+use App\Support\ModuleRegistry;
+use App\Support\SettingsRegistry;
+use App\Support\Studio;
+use Filament\Actions\Testing\TestAction;
+use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
+
+class StudioFeatureTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['studio.demo' => true]);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+    }
+
+    private function userWith(array $permissions): User
+    {
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+        $user = User::factory()->create(['is_active' => true]);
+        $user->givePermissionTo($permissions);
+
+        return $user;
+    }
+
+    private function owner(): User
+    {
+        $permissions = ['dashboard.view', 'settings.update'];
+        foreach (ModuleRegistry::all() as $key => $definition) {
+            foreach (['view', 'create', 'update', 'delete', 'export'] as $action) {
+                $permissions[] = $key.'.'.$action;
+            }
+        }
+        $user = $this->userWith($permissions);
+        $role = Role::findOrCreate('Owner', 'web');
+        $user->assignRole($role);
+
+        return $user;
+    }
+
+    public function test_admin_typography_controls_and_module_icons_are_configured(): void
+    {
+        $dashboard = SettingsRegistry::groups()['dashboard'];
+
+        $this->assertSame('600', $dashboard['small_text_weight'][3]);
+        $this->assertSame('13', $dashboard['small_text_size'][3]);
+        $this->assertSame('heroicon-o-photo', AssetResource::getNavigationIcon());
+        $this->assertSame('heroicon-o-wrench-screwdriver', ServiceResource::getNavigationIcon());
+        $this->assertArrayNotHasKey('icon', ModuleRegistry::get('services')['fields']);
+        $this->assertSame('heroicon-o-computer-desktop', ProjectResource::getNavigationIcon());
+        $this->assertSame('heroicon-o-newspaper', PostResource::getNavigationIcon());
+        $this->assertSame(['IBM Plex Sans Arabic', 'Cairo', 'Tajawal'], array_keys(FontRegistry::arabicOptions()));
+        $this->assertSame(['Cormorant Garamond', 'DM Sans', 'Inter', 'Poppins'], array_keys(FontRegistry::englishOptions()));
+        $this->assertSame('IBM Plex Sans Arabic', FontRegistry::arabic('invalid-font'));
+        $this->assertSame('Cormorant Garamond', FontRegistry::english('invalid-font'));
+
+        Studio::put('dashboard.small_text_weight', '900', 'dashboard');
+        Studio::put('dashboard.small_text_size', '99', 'dashboard');
+        Studio::flush();
+
+        $this->actingAs($this->owner())
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('--studio-admin-small-weight:600', false)
+            ->assertSee('--studio-admin-small-size:13px', false);
+
+        Studio::put('design.arabic_font', 'Cairo', 'design');
+        Studio::put('design.english_font', 'Inter', 'design');
+        Studio::flush();
+
+        $this->get('/ar')
+            ->assertOk()
+            ->assertSee("--arabic-font:'Cairo'", false)
+            ->assertSee("--english-font:'Inter'", false);
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertSee("--font-family: 'Cairo';", false);
+    }
+
+    public function test_public_routes_render_in_both_languages_with_seo(): void
+    {
+        Page::factory()->create(['template' => 'about', 'status' => 'published']);
+        $service = Service::factory()->create(['status' => 'published', 'service_category_id' => ServiceCategory::factory()->create(['status' => 'published'])->id]);
+        $project = Project::factory()->create(['status' => 'published', 'project_category_id' => ProjectCategory::factory()->create(['status' => 'published'])->id]);
+        $post = Post::factory()->create(['status' => 'published', 'published_at' => now()->subDay(), 'post_category_id' => PostCategory::factory()->create(['status' => 'published'])->id, 'author_id' => User::factory()->create()->id]);
+        foreach (['ar', 'en'] as $locale) {
+            foreach (['', '/services', '/work', '/journal', '/about', '/process', '/testimonials', '/contact', '/services/'.$service->text('slug', $locale), '/work/'.$project->text('slug', $locale), '/journal/'.$post->text('slug', $locale)] as $path) {
+                $this->get('/'.$locale.$path)->assertOk()->assertSee('lang="'.$locale.'"', false)->assertSee('rel="canonical"', false);
+            }
+        }
+        $this->get('/')->assertRedirect();
+        $this->get('/sitemap.xml')->assertOk();
+        $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /');
+    }
+
+    public function test_project_detail_combines_main_media_and_gallery_without_public_demo_labels(): void
+    {
+        $main = Asset::factory()->create([
+            'name' => ['ar' => 'الصورة الرئيسية', 'en' => 'Main image'],
+            'alt' => ['ar' => 'الصورة الرئيسية', 'en' => 'Main image'],
+        ]);
+        $galleryImage = Asset::factory()->create([
+            'name' => ['ar' => 'صورة التفاصيل', 'en' => 'Detail image'],
+            'alt' => ['ar' => 'صورة التفاصيل', 'en' => 'Detail image'],
+        ]);
+        $category = ProjectCategory::factory()->create([
+            'name' => ['ar' => 'أنظمة', 'en' => 'Systems'],
+            'status' => 'published',
+        ]);
+        $project = Project::factory()->create([
+            'title' => ['ar' => 'نظام إدارة', 'en' => 'Management system'],
+            'status' => 'published',
+            'project_category_id' => $category->id,
+            'main_media_id' => $main->id,
+            'live_url' => 'https://example.com/project',
+        ]);
+        ProjectMedia::create([
+            'project_id' => $project->id,
+            'media_id' => $galleryImage->id,
+            'type' => 'image',
+            'caption' => ['ar' => 'تفاصيل النظام', 'en' => 'System details'],
+            'sort_order' => 0,
+        ]);
+        Project::factory()->create([
+            'title' => ['ar' => 'عمل مرتبط', 'en' => 'Related work'],
+            'status' => 'published',
+            'project_category_id' => $category->id,
+            'main_media_id' => $galleryImage->id,
+        ]);
+        Project::factory()->count(3)->create([
+            'status' => 'published',
+            'project_category_id' => $category->id,
+            'main_media_id' => $galleryImage->id,
+        ]);
+
+        $response = $this->get('/ar/work/'.$project->text('slug', 'ar'))
+            ->assertOk()
+            ->assertSee('project-showcase', false)
+            ->assertSee('project-gallery--hero', false)
+            ->assertSee('project-gallery-main', false)
+            ->assertSee('project-showcase-link', false)
+            ->assertSee('related-projects', false)
+            ->assertSee('related-projects-swiper', false)
+            ->assertSee('data-swiper-kind="related"', false)
+            ->assertSee('data-autoplay="1"', false)
+            ->assertSee('data-drag="1"', false)
+            ->assertSee('data-loop="1"', false)
+            ->assertDontSee('gallery-section', false)
+            ->assertDontSee('inline-demo', false)
+            ->assertDontSee(Studio::text('demo_notice'));
+
+        $this->assertSame(2, substr_count($response->getContent(), 'data-slide-to="'));
+    }
+
+    public function test_public_archive_filters_refresh_results_and_page_labels_follow_the_locale(): void
+    {
+        $development = ServiceCategory::factory()->create([
+            'name' => ['ar' => 'التطوير', 'en' => 'Development'],
+            'status' => 'published',
+        ]);
+        $design = ServiceCategory::factory()->create([
+            'name' => ['ar' => 'التصميم', 'en' => 'Design'],
+            'status' => 'published',
+        ]);
+        Service::factory()->create([
+            'name' => ['ar' => 'خدمة برمجية', 'en' => 'Development service'],
+            'service_category_id' => $development->id,
+            'status' => 'published',
+        ]);
+        Service::factory()->create([
+            'name' => ['ar' => 'خدمة تصميم', 'en' => 'Design service'],
+            'service_category_id' => $design->id,
+            'status' => 'published',
+        ]);
+
+        Livewire::test(BrowseContent::class, ['module' => 'services'])
+            ->assertSee('خدمة برمجية')
+            ->assertSee('خدمة تصميم')
+            ->set('category', (string) $development->id)
+            ->assertSee('خدمة برمجية')
+            ->assertDontSee('خدمة تصميم')
+            ->set('category', (string) $design->id)
+            ->assertDontSee('خدمة برمجية')
+            ->assertSee('خدمة تصميم');
+
+        $this->get('/ar/services')
+            ->assertOk()
+            ->assertSee('إسلام ويب ستوديو / الخدمات')
+            ->assertDontSee('ISLAM WEB STUDIO / SERVICES');
+        $this->get('/en/services')
+            ->assertOk()
+            ->assertSee('Islam Web Studio / Services');
+        $this->get('/ar/process')->assertSee('إسلام ويب ستوديو / منهجيتنا');
+        $this->get('/ar/testimonials')->assertSee('إسلام ويب ستوديو / آراء العملاء');
+        $this->get('/ar/contact')->assertSee('إسلام ويب ستوديو / تواصل معنا');
+    }
+
+    public function test_dynamic_pages_use_managed_story_media_and_gallery_without_founder_or_cta_sections(): void
+    {
+        $hero = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
+        $galleryImage = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
+        $galleryVideo = Asset::factory()->create(['kind' => 'video', 'visibility' => 'public', 'is_active' => true]);
+        $galleryImageTwo = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
+        $galleryFile = Asset::factory()->create(['kind' => 'file', 'visibility' => 'public', 'is_active' => true]);
+
+        $page = Page::factory()->create([
+            'template' => 'about',
+            'status' => 'published',
+            'hero_media_id' => $hero->id,
+            'title' => ['ar' => 'عنوان من نحن المُدار', 'en' => 'Managed about title'],
+            'excerpt' => ['ar' => 'الوصف المختصر المُدار', 'en' => 'Managed short description'],
+            'content' => ['ar' => '<h2>الوصف الكبير المُدار</h2><p>تفاصيل الاستوديو الكاملة.</p>', 'en' => '<h2>Managed long description</h2><p>Full studio details.</p>'],
+        ]);
+
+        $page->gallery()->createMany([
+            ['media_id' => $galleryImage->id, 'kind' => 'gallery_image', 'caption' => ['ar' => 'صورة من الجاليري', 'en' => 'Gallery image'], 'sort_order' => 0],
+            ['media_id' => $galleryVideo->id, 'kind' => 'video', 'caption' => ['ar' => 'فيديو من الجاليري', 'en' => 'Gallery video'], 'sort_order' => 1],
+            ['media_id' => $galleryImageTwo->id, 'kind' => 'gallery_image', 'caption' => ['ar' => 'صورة ثانية', 'en' => 'Second gallery image'], 'sort_order' => 2],
+            ['media_id' => $galleryFile->id, 'kind' => 'file', 'caption' => ['ar' => 'ملف للتحميل', 'en' => 'Downloadable file'], 'sort_order' => 3],
+        ]);
+
+        $this->get('/ar/about')
+            ->assertOk()
+            ->assertSee('عنوان من نحن المُدار')
+            ->assertSee('الوصف المختصر المُدار')
+            ->assertSee('class="page-intro dynamic-page-intro shell"', false)
+            ->assertSee('dynamic-page-story', false)
+            ->assertSee('class="dynamic-page-story-media"', false)
+            ->assertSee('الوصف الكبير المُدار')
+            ->assertSee('class="page-gallery"', false)
+            ->assertSee('<video', false)
+            ->assertSee('data-studio-video', false)
+            ->assertSee('data-video-progress', false)
+            ->assertSee('data-reveal="side"', false)
+            ->assertSee('data-reveal="up"', false)
+            ->assertSee('data-reveal="down"', false)
+            ->assertDontSee('studio-video__media" controls', false)
+            ->assertSee('ملف للتحميل')
+            ->assertDontSee('founder-note')
+            ->assertDontSee('cta-band')
+            ->assertDontSee('home-contact');
+
+        $standardPage = Page::factory()->create([
+            'template' => 'standard',
+            'status' => 'published',
+            'hero_media_id' => $galleryVideo->id,
+        ]);
+
+        $this->get('/ar/'.$standardPage->text('slug', 'ar'))
+            ->assertOk()
+            ->assertSee('dynamic-page-story', false)
+            ->assertSee('data-studio-video', false)
+            ->assertDontSee('class="detail-hero"', false);
+
+        $homeSettings = SettingsRegistry::groups()['home'];
+        $this->assertArrayNotHasKey('cta_title', $homeSettings);
+        $this->assertArrayNotHasKey('cta_text', $homeSettings);
+    }
+
+    public function test_home_service_cards_render_their_images_without_icons(): void
+    {
+        $image = Asset::factory()->create();
+        Service::factory()->create([
+            'status' => 'published',
+            'is_featured' => true,
+            'image_media_id' => $image->id,
+        ]);
+
+        $this->get('/ar')
+            ->assertOk()
+            ->assertSee('class="services-heading"', false)
+            ->assertSee('class="service-card-media"', false)
+            ->assertSee('<picture', false)
+            ->assertDontSee('service-symbol')
+            ->assertDontSee('service-card-index');
+    }
+
+    public function test_drafts_future_posts_and_unapproved_reviews_are_not_public(): void
+    {
+        $draft = Page::factory()->create(['status' => 'draft']);
+        $future = Post::factory()->create(['status' => 'published', 'published_at' => now()->addDay()]);
+        $this->get('/en/'.$draft->text('slug', 'en'))->assertNotFound();
+        $this->get('/en/journal/'.$future->text('slug', 'en'))->assertNotFound();
+        Testimonial::factory()->create(['quote' => ['en' => 'Unapproved secret review', 'ar' => 'تقييم غير معتمد'], 'is_approved' => false]);
+        $this->get('/en/testimonials')->assertDontSee('Unapproved secret review');
+    }
+
+    public function test_dynamic_menu_selection_cache_invalidation_and_translated_urls(): void
+    {
+        app()->setLocale('en');
+        $menu = MenuLocation::factory()->create(['key' => 'navbar']);
+        $visible = Service::factory()->create(['status' => 'published', 'slug' => ['ar' => 'خدمة-مميزة', 'en' => 'chosen-service']]);
+        $draft = Service::factory()->create(['status' => 'draft']);
+        MenuItem::factory()->create(['menu_location_id' => $menu->id, 'type' => 'dynamic_group', 'dynamic_source' => 'services', 'dynamic_mode' => 'selected', 'dynamic_items' => [$visible->id, $draft->id], 'visibility' => 'all']);
+        $this->assertCount(1, MenuResolver::forLocation('navbar')[0]['children']);
+        $this->assertStringContainsString('/en/services/chosen-service', MenuResolver::forLocation('navbar')[0]['children'][0]['url']);
+        $visible->update(['is_active' => false]);
+        $this->assertSame([], MenuResolver::forLocation('navbar'));
+    }
+
+    public function test_admin_resources_and_forms_render_for_authorized_owner(): void
+    {
+        $this->actingAs($this->owner());
+        foreach (ModuleRegistry::all() as $key => $definition) {
+            if ($definition['child'] ?? false) {
+                continue;
+            }$path = '/admin/'.str_replace('_', '-', $key);
+            $this->get($path)->assertOk();
+            if (! ($definition['readonly'] ?? false)) {
+                $this->get($path.'/create')->assertOk();
+            }
+        }
+        foreach (['/admin', '/admin/studio-settings', '/admin/menu-builder', '/admin/lead-pipeline', '/admin/users', '/admin/roles'] as $path) {
+            $this->get($path)->assertOk();
+        }
+    }
+
+    public function test_localized_admin_urls_redirect_to_the_dashboard(): void
+    {
+        $this->get('/ar/admin')->assertRedirect('/admin');
+        $this->get('/en/admin/services')->assertRedirect('/admin/services');
+        $this->get('/admin')->assertRedirect('/admin/login');
+    }
+
+    public function test_viewer_cannot_edit_or_change_inline_content(): void
+    {
+        $viewer = $this->userWith(['dashboard.view', 'services.view']);
+        $service = Service::factory()->create(['is_featured' => false]);
+        $this->actingAs($viewer)->get('/admin/services/'.$service->id.'/edit')->assertForbidden();
+        $this->get('/admin/leads')->assertForbidden();
+        Livewire::actingAs($viewer)->test(ListRecords::class)->call('updateTableColumnState', 'is_featured', (string) $service->id, true);
+        $this->assertFalse($service->refresh()->is_featured);
+    }
+
+    public function test_owner_can_toggle_featured_without_navigation_and_filter_records(): void
+    {
+        $owner = $this->owner();
+        $first = Service::factory()->create(['name' => ['ar' => 'متجر ألف', 'en' => 'Alpha store'], 'is_featured' => false]);
+        $second = Service::factory()->create(['name' => ['ar' => 'موقع بيتا', 'en' => 'Beta website'], 'is_featured' => true]);
+        $component = Livewire::actingAs($owner)->test(ListRecords::class)->call('updateTableColumnState', 'is_featured', (string) $first->id, true);
+        $this->assertTrue($first->refresh()->is_featured);
+        $component->searchTable('Alpha')->assertCanSeeTableRecords([$first])->assertCanNotSeeTableRecords([$second]);
+    }
+
+    public function test_quote_form_validates_and_saves_once_with_server_controlled_status(): void
+    {
+        $service = Service::factory()->create(['status' => 'published']);
+        Livewire::test(QuoteForm::class)->call('submit')->assertHasErrors(['name', 'email', 'phone', 'message', 'consent']);
+        $form = Livewire::test(QuoteForm::class)->set('name', 'Test visitor')->set('email', 'visitor@example.test')->set('phone', '+201000000000')->set('service_id', (string) $service->id)->set('message', 'A real test message about a new website project.')->set('consent', true)->call('submit')->assertHasNoErrors()->assertSet('sent', true);
+        $form->call('submit');
+        $this->assertDatabaseCount('leads', 1);
+        $this->assertDatabaseHas('leads', ['email' => 'visitor@example.test', 'status' => 'new', 'source' => 'form']);
+    }
+
+    public function test_quote_form_sends_dynamic_toast_and_database_notification(): void
+    {
+        $recipient = $this->userWith(['leads.view']);
+
+        Livewire::test(QuoteForm::class)
+            ->set('name', 'Notification visitor')
+            ->set('email', 'notify@example.test')
+            ->set('phone', '+201000000001')
+            ->set('message', 'A complete project request that should notify the studio team.')
+            ->set('consent', true)
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertDispatched('studio-toast', type: 'success');
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_type' => User::class,
+            'notifiable_id' => $recipient->id,
+        ]);
+        $this->assertSame('filament', $recipient->notifications()->firstOrFail()->data['format']);
+    }
+
+    public function test_honeypot_and_draft_service_do_not_create_leads(): void
+    {
+        Livewire::test(QuoteForm::class)->set('website', 'bot')->call('submit');
+        $this->assertDatabaseCount('leads', 0);
+        $draft = Service::factory()->create(['status' => 'draft']);
+        Livewire::test(QuoteForm::class)->set('name', 'Test visitor')->set('email', 'visitor@example.test')->set('phone', '+201000000000')->set('service_id', (string) $draft->id)->set('message', 'A test request for a service that should be unavailable.')->set('consent', true)->call('submit')->assertHasErrors('service_id');
+        $this->assertDatabaseCount('leads', 0);
+    }
+
+    public function test_private_media_requires_authentication_and_permission(): void
+    {
+        $asset = Asset::factory()->create(['visibility' => 'private']);
+        $this->get('/private-assets/'.$asset->id)->assertRedirect();
+        $viewer = $this->userWith(['dashboard.view']);
+        $this->actingAs($viewer)->get('/private-assets/'.$asset->id)->assertForbidden();
+    }
+
+    public function test_excel_export_is_scoped_private_and_formula_safe(): void
+    {
+        Storage::fake('local');
+        $owner = $this->owner();
+        $lead = Lead::factory()->create(['name' => '=HYPERLINK("https://example.test")']);
+        $excluded = Lead::factory()->create(['name' => 'Excluded lead']);
+        $run = ExportRun::create(['user_id' => $owner->id, 'module' => 'leads', 'ids' => [$lead->id], 'columns' => ['name', 'email', 'status'], 'locale' => 'both', 'status' => 'queued']);
+        BuildExport::dispatchSync($run->id);
+        $run->refresh();
+        $this->assertSame('completed', $run->status);
+        Storage::disk('local')->assertExists($run->file_path);
+        $book = IOFactory::load(Storage::disk('local')->path($run->file_path));
+        $sheet = $book->getActiveSheet();
+        $this->assertSame(2, $sheet->getHighestRow());
+        $this->assertSame('s', $sheet->getCell('B2')->getDataType());
+        $this->assertSame($lead->name, $sheet->getCell('B2')->getValue());
+        $this->actingAs($owner)->get('/exports/'.$run->id.'/download')->assertOk();
+        $other = $this->userWith(['dashboard.view', 'leads.export']);
+        $this->actingAs($other)->get('/exports/'.$run->id.'/download')->assertForbidden();
+    }
+
+    public function test_rich_text_sanitizer_removes_scripts_and_unsafe_links(): void
+    {
+        $html = Studio::cleanHtml('<p>Safe text</p><script>alert(1)</script><a href="javascript:alert(1)">Link</a><img src=x onerror=alert(1)>');
+        $this->assertStringContainsString('Safe text', $html);
+        $this->assertStringNotContainsString('<script', $html);
+        $this->assertStringNotContainsString('javascript:', $html);
+        $this->assertStringNotContainsString('onerror', $html);
+    }
+
+    public function test_bilingual_service_create_edit_and_child_features_persist(): void
+    {
+        $owner = $this->owner();
+        Livewire::actingAs($owner)->test(CreateRecord::class)
+            ->fillForm(['name' => ['ar' => 'خدمة اختبار', 'en' => 'QA service'], 'slug' => ['ar' => 'خدمة-اختبار', 'en' => 'qa-service'], 'short_description' => ['ar' => 'وصف الخدمة', 'en' => 'Service summary'], 'long_description' => ['ar' => '<p>وصف تفصيلي</p>', 'en' => '<p>Detailed description</p>'], 'service_category_id' => ServiceCategory::factory()->create()->id, 'status' => 'published', 'is_active' => true, 'is_featured' => false, 'sort_order' => 0, 'pricing_type' => 'on_request', 'seo_index' => true])
+            ->call('create')->assertHasNoFormErrors();
+        $service = Service::where('slug->en', 'qa-service')->firstOrFail();
+        $this->assertSame('خدمة اختبار', $service->text('name', 'ar'));
+        $service->features()->create(['text' => ['ar' => 'ميزة قديمة', 'en' => 'Old feature'], 'sort_order' => 0]);
+        $edit = Livewire::actingAs($owner)->test(EditRecord::class, ['record' => $service->id]);
+        $features = $edit->get('data.features');
+        $key = array_key_first($features);
+        $features[$key]['text'] = ['ar' => 'ميزة جديدة', 'en' => 'Updated feature'];
+        $edit->fillForm(['name' => ['ar' => 'خدمة معدلة', 'en' => 'Edited service'], 'features' => $features])->call('save')->assertHasNoFormErrors();
+        $this->assertSame('Edited service', $service->refresh()->text('name', 'en'));
+        $this->assertSame('ميزة جديدة', $service->features()->first()->text('text', 'ar'));
+    }
+
+    public function test_filtered_export_uses_search_and_inclusive_dates(): void
+    {
+        Queue::fake();
+        $owner = $this->owner();
+        $selected = Lead::factory()->create(['name' => 'Selected request', 'created_at' => '2026-08-31 22:30:00']);
+        Lead::factory()->create(['name' => 'Selected old request', 'created_at' => '2026-07-31 22:30:00']);
+        Lead::factory()->create(['name' => 'Other request', 'created_at' => '2026-08-15 12:00:00']);
+        Livewire::actingAs($owner)->test(\App\Filament\Resources\Leads\Pages\ListRecords::class)
+            ->searchTable('Selected')->filterTable('created_range', ['from' => '2026-08-01', 'until' => '2026-08-31'])
+            ->assertCanSeeTableRecords([$selected])->callAction(TestAction::make('export')->table(), ['locale' => 'both'])->assertHasNoActionErrors();
+        $run = ExportRun::firstOrFail();
+        $this->assertSame([$selected->id], $run->ids);
+        $this->assertSame(1, $run->row_count);
+        Queue::assertPushed(BuildExport::class);
+    }
+
+    public function test_menu_tree_rejects_cycles_and_does_not_partially_save(): void
+    {
+        $owner = $this->owner();
+        $menu = MenuLocation::factory()->create();
+        $a = MenuItem::factory()->create(['menu_location_id' => $menu->id, 'parent_id' => null, 'sort_order' => 0]);
+        $b = MenuItem::factory()->create(['menu_location_id' => $menu->id, 'parent_id' => null, 'sort_order' => 1]);
+        Livewire::actingAs($owner)->test(MenuBuilder::class)->set('location', $menu->id)
+            ->call('saveTree', [['id' => $a->id, 'parent_id' => $b->id, 'sort_order' => 1], ['id' => $b->id, 'parent_id' => $a->id, 'sort_order' => 0]])->assertStatus(422);
+        $this->assertNull($a->refresh()->parent_id);
+        $this->assertNull($b->refresh()->parent_id);
+        Livewire::actingAs($owner)->test(MenuBuilder::class)->set('location', $menu->id)
+            ->call('saveTree', [['id' => $a->id, 'parent_id' => null, 'sort_order' => 0], ['id' => $b->id, 'parent_id' => $a->id, 'sort_order' => 0]])->assertHasNoErrors();
+        $this->assertSame($a->id, $b->refresh()->parent_id);
+    }
+
+    public function test_custom_menu_location_is_invalidated_when_content_changes(): void
+    {
+        app()->setLocale('en');
+        $location = MenuLocation::factory()->create(['key' => 'landing-links']);
+        $page = Page::factory()->create(['status' => 'published', 'template' => 'default']);
+        MenuItem::factory()->create(['menu_location_id' => $location->id, 'type' => 'page', 'page_id' => $page->id, 'visibility' => 'all']);
+        $this->assertCount(1, MenuResolver::forLocation('landing-links'));
+        $page->update(['status' => 'draft']);
+        $this->assertSame([], MenuResolver::forLocation('landing-links'));
+    }
+
+    public function test_media_pipeline_creates_responsive_images_in_private_storage(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Queue::fake();
+        $source = UploadedFile::fake()->image('test.jpg', 480, 320)->storeAs('incoming', 'safe-test.jpg', 'local');
+        $asset = Asset::factory()->create(['visibility' => 'private', 'upload_path' => $source]);
+        $this->assertNull($asset->upload_path);
+        $this->assertNotNull($asset->original());
+        $this->assertTrue($asset->metadata['processed']);
+        $this->assertFalse($asset->metadata['optimized']);
+        app(MediaPipeline::class)->process($asset);
+        $asset->refresh();
+        $this->assertSame(480, $asset->metadata['width']);
+        $this->assertSame(320, $asset->metadata['height']);
+        $this->assertNotEmpty($asset->metadata['webp']);
+        $this->assertNotEmpty($asset->metadata['avif']);
+        $this->assertStringStartsWith('data:image/webp;base64,', $asset->metadata['lqip']);
+        foreach ($asset->metadata['webp'] as $path) {
+            Storage::disk('local')->assertExists($path);
+            Storage::disk('public')->assertMissing($path);
+        }
+        Storage::disk('local')->assertMissing($source);
+        $this->assertNull($asset->upload_path);
+    }
+
+    public function test_visual_media_picker_renders_previews_and_adds_upload_to_library(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Queue::fake();
+
+        $image = Asset::factory()->create(['kind' => 'image']);
+        $image->addMedia(UploadedFile::fake()->image('preview.jpg', 320, 220))->toMediaCollection('original', 'public');
+        $video = Asset::factory()->create(['kind' => 'video']);
+        $video->addMedia(UploadedFile::fake()->create('preview.mp4', 120, 'video/mp4'))->toMediaCollection('original', 'public');
+
+        $this->assertStringContainsString('<img', MediaPicker::optionHtml($image));
+        $this->assertStringContainsString('<video', MediaPicker::optionHtml($video));
+
+        $path = UploadedFile::fake()->image('new-library-image.jpg', 480, 320)->store('incoming', 'local');
+        $created = MediaPicker::createAsset([
+            'upload_path' => $path,
+            'name_ar' => 'صورة من الاختيار',
+            'name_en' => 'Picker image',
+            'alt_ar' => 'وصف الصورة',
+            'alt_en' => 'Image description',
+        ], ['image']);
+
+        $this->assertSame('public', $created->visibility);
+        $this->assertSame('image', $created->kind);
+        $this->assertNull($created->upload_path);
+        $this->assertTrue($created->metadata['processed']);
+        $this->assertFalse($created->metadata['optimized']);
+        $this->assertNotNull($created->original());
+        Storage::disk('local')->assertMissing($path);
+        app()->setLocale('en');
+        $this->assertStringContainsString('Picker image', MediaPicker::optionHtml($created));
+    }
+
+    public function test_only_one_home_hero_renders_and_its_video_is_deferred(): void
+    {
+        $page = Page::factory()->create(['status' => 'published', 'template' => 'default']);
+        $oldSlider = Slider::factory()->create(['name' => 'Old hero', 'location' => 'page:'.$page->id]);
+        $slider = Slider::factory()->create(['name' => 'Current hero']);
+        $video = Asset::factory()->create(['kind' => 'video', 'visibility' => 'public']);
+        $slider->slides()->create(['title' => ['ar' => 'هيرو الرئيسية', 'en' => 'Home hero test'], 'description' => ['ar' => 'تجربة فيديو', 'en' => 'Video test'], 'desktop_media_id' => $video->id, 'desktop_media_type' => 'video', 'is_active' => true, 'sort_order' => 0]);
+
+        $this->assertSame('home_hero', $oldSlider->refresh()->location);
+        $this->assertFalse($oldSlider->is_active);
+        $this->assertSame('home_hero', $slider->refresh()->location);
+        $this->assertArrayNotHasKey('location', ModuleRegistry::get('sliders')['fields']);
+
+        $response = $this->get('/en')->assertOk()->assertSee('Home hero test')->assertSee('id="home-hero"', false)->assertSee('hero-media', false);
+        $this->assertSame(1, substr_count($response->getContent(), '<h3 class="slide-title"'));
+        $response->assertSee('preload="none"', false)->assertSee('data-src=', false);
+
+        $this->get('/en/'.$page->text('slug', 'en'))->assertOk()->assertDontSee('Home hero test')->assertDontSee('id="home-hero"', false);
+    }
+
+    public function test_home_slide_can_render_media_without_any_copy(): void
+    {
+        $this->assertFalse(ModuleRegistry::get('slides')['fields']['title']['required']);
+
+        $slider = Slider::factory()->create(['name' => 'Media only hero']);
+        $image = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public']);
+        Livewire::actingAs($this->owner())
+            ->test(CreateSlideRecord::class)
+            ->fillForm([
+                'slider_id' => $slider->id,
+                'title' => ['ar' => '', 'en' => ''],
+                'description' => ['ar' => '', 'en' => ''],
+                'button_text' => ['ar' => '', 'en' => ''],
+                'button_url' => null,
+                'desktop_media_id' => $image->id,
+                'desktop_media_type' => 'image',
+                'is_active' => true,
+                'sort_order' => 0,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('slides', ['slider_id' => $slider->id, 'desktop_media_id' => $image->id]);
+
+        $this->get('/ar')
+            ->assertOk()
+            ->assertSee('class="hero-media"', false)
+            ->assertDontSee('class="hero-content"', false)
+            ->assertDontSee('class="slide-title"', false)
+            ->assertDontSee('hero-kicker', false)
+            ->assertDontSee('hero-signature', false)
+            ->assertDontSee('Digital solutions · Cairo');
+    }
+
+    public function test_home_displays_at_most_nine_projects_with_the_original_card_layout(): void
+    {
+        Project::factory()->count(10)->create(['status' => 'published']);
+
+        $response = $this->get('/ar')
+            ->assertOk()
+            ->assertSee('class="projects-grid"', false)
+            ->assertDontSee('projects-grid--showcase');
+
+        $this->assertSame(9, substr_count($response->getContent(), '<article class="project-card">'));
+    }
+
+    public function test_home_intro_section_content_and_image_are_managed_by_settings(): void
+    {
+        $image = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
+        $homeSettings = SettingsRegistry::groups()['home'];
+
+        $this->assertSame('asset', $homeSettings['intro_media'][0]);
+        $this->assertSame('media_fit', $homeSettings['intro_media_fit'][0]);
+        Livewire::actingAs($this->owner())
+            ->test(StudioSettings::class)
+            ->assertFormFieldExists('home.intro_enabled')
+            ->assertFormFieldExists('home.intro_media')
+            ->assertFormFieldExists('home.intro_title.ar')
+            ->assertFormFieldExists('home.intro_title.en')
+            ->assertFormFieldExists('home.intro_link_url');
+
+        foreach ([
+            'intro_enabled' => true,
+            'intro_media_enabled' => true,
+            'intro_media' => $image->id,
+            'intro_media_fit' => 'contain',
+            'intro_frame_enabled' => false,
+            'intro_media_background' => '#105666',
+            'intro_media_caption_color' => '#F7F4D5',
+            'intro_media_caption' => ['ar' => 'نص الصورة المُدار', 'en' => 'Managed image caption'],
+            'intro_label' => ['ar' => 'عنوان تمهيدي مُدار', 'en' => 'Managed eyebrow'],
+            'intro_title' => ['ar' => 'عنوان مُدار', 'en' => 'Managed introduction title'],
+            'intro_text' => ['ar' => 'وصف مُدار', 'en' => 'Managed introduction copy'],
+            'intro_link_enabled' => true,
+            'intro_link_text' => ['ar' => 'اعرف أكثر', 'en' => 'Learn more'],
+            'intro_link_url' => 'https://example.com/about',
+            'intro_link_new_tab' => true,
+            'intro_founder_label' => ['ar' => 'وصف المؤسس', 'en' => 'Managed founder label'],
+            'intro_signature' => ['ar' => 'توقيع', 'en' => 'Managed signature'],
+        ] as $key => $value) {
+            Studio::put('home.'.$key, $value, 'home');
+        }
+        Studio::flush();
+
+        $this->get('/en')
+            ->assertOk()
+            ->assertSee('id="home-intro"', false)
+            ->assertSee('intro-mark--asset', false)
+            ->assertSee('intro-mark--no-frame', false)
+            ->assertSee('--intro-media-background:#105666', false)
+            ->assertSee('--intro-media-fit:contain', false)
+            ->assertSee('Managed image caption')
+            ->assertSee('Managed introduction title')
+            ->assertSee('Managed introduction copy')
+            ->assertSee('Learn more')
+            ->assertSee('target="_blank"', false)
+            ->assertSee('Managed founder label')
+            ->assertSee('Managed signature');
+
+        Studio::put('home.intro_media_caption', ['ar' => null, 'en' => null], 'home');
+        Studio::put('home.intro_founder_label', ['ar' => null, 'en' => null], 'home');
+        Studio::flush();
+        $this->get('/en')
+            ->assertOk()
+            ->assertDontSee('Managed image caption')
+            ->assertDontSee('WE CONNECT')
+            ->assertDontSee('Managed founder label')
+            ->assertDontSee('Founder & technical lead');
+
+        Studio::put('home.intro_enabled', false, 'home');
+        Studio::flush();
+        $this->get('/en')->assertOk()->assertDontSee('id="home-intro"', false);
+    }
+
+    public function test_footer_has_four_dynamic_columns_and_uses_dashboard_contact_settings(): void
+    {
+        Studio::put('general.email', 'islamwebstudio@info.com');
+        Studio::put('general.phone', '01114292011');
+        Studio::put('general.socials', [
+            ['label' => 'Facebook', 'url' => 'https://facebook.com/islam-web-studio'],
+            ['label' => 'Instagram', 'url' => 'https://instagram.com/islam_web_studio'],
+            ['label' => 'TikTok', 'url' => 'https://tiktok.com/@islam_webstudio'],
+        ]);
+        Service::factory()->create([
+            'name' => ['ar' => 'خدمة تظهر في الفوتر', 'en' => 'Footer service'],
+            'slug' => ['ar' => 'خدمة-الفوتر', 'en' => 'footer-service'],
+            'status' => 'published',
+            'is_active' => true,
+        ]);
+
+        $response = $this->get('/ar')
+            ->assertOk()
+            ->assertSee('islamwebstudio@info.com')
+            ->assertSee('01114292011')
+            ->assertSee('خدمة تظهر في الفوتر')
+            ->assertSee('aria-label="Facebook"', false)
+            ->assertSee('aria-label="Instagram"', false)
+            ->assertSee('aria-label="TikTok"', false)
+            ->assertDontSee('demo-note', false)
+            ->assertDontSee(Studio::text('demo_notice'));
+
+        $this->assertSame(4, substr_count($response->getContent(), 'data-footer-column='));
+        $this->assertSame('islamwebstudio@info.com', SettingsRegistry::defaults()['general.email']);
+        $this->assertCount(3, SettingsRegistry::defaults()['general.socials']);
+    }
+
+    public function test_inactive_user_cannot_access_dashboard_and_expired_export_is_unavailable(): void
+    {
+        $owner = $this->owner();
+        $owner->update(['is_active' => false]);
+        $this->actingAs($owner)->get('/admin')->assertForbidden();
+        $owner->update(['is_active' => true]);
+        Storage::fake('local');
+        Storage::disk('local')->put('exports/expired.xlsx', 'test');
+        $run = ExportRun::create(['user_id' => $owner->id, 'module' => 'leads', 'status' => 'completed', 'file_path' => 'exports/expired.xlsx', 'created_at' => now()->subDays(8)]);
+        $this->actingAs($owner)->get('/exports/'.$run->id.'/download')->assertNotFound();
+    }
+
+    public function test_deleted_roles_can_be_restored_without_losing_permissions(): void
+    {
+        $owner = $this->owner();
+        $permission = Permission::findOrCreate('pages.view', 'web');
+        $role = Role::findOrCreate('Temporary reviewer', 'web');
+        $role->givePermissionTo($permission);
+        $this->assertTrue($owner->can('delete', $role));
+        $role->delete();
+        $this->assertSoftDeleted('roles', ['id' => $role->id]);
+        $role->restore();
+        $this->assertTrue($role->hasPermissionTo('pages.view'));
+        $this->assertFalse($owner->can('delete', Role::findByName('Owner', 'web')));
+    }
+}

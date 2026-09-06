@@ -1,0 +1,2 @@
+@extends('layouts.site')
+@section('content')<section class="page-intro shell"><x-page-eyebrow :label="\App\Support\Studio::text('route_testimonials')" /><h1>@t('testimonials_title')</h1><p>@t('testimonials_intro')</p></section><section class="section shell"><div class="testimonials-grid">@foreach($testimonials as $review)<x-testimonial :review="$review" />@endforeach</div><div class="pagination">{{ $testimonials->links() }}</div></section>@endsection
