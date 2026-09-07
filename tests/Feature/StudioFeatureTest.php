@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Pages\MenuBuilder;
 use App\Filament\Pages\StudioSettings;
 use App\Filament\Resources\Assets\AssetResource;
@@ -593,6 +594,18 @@ class StudioFeatureTest extends TestCase
 
         $this->assertStringContainsString('<img', MediaPicker::optionHtml($image));
         $this->assertStringContainsString('<video', MediaPicker::optionHtml($video));
+
+        $picker = MediaPicker::make('photo_media_id', ['image']);
+        $this->assertInstanceOf(MediaLibraryPicker::class, $picker);
+        $this->assertSame(['image'], $picker->getMediaTypes());
+        $this->assertSame([$image->id], $picker->getMediaAssets()->pluck('id')->all());
+
+        Livewire::actingAs($this->owner())
+            ->test(CreateSlideRecord::class)
+            ->assertSee('iws-media-picker__control', false)
+            ->assertSee('iws-media-library__grid', false)
+            ->assertSee(Studio::text('choose_from_media_library'))
+            ->assertSee(Studio::text('preview'));
 
         $path = UploadedFile::fake()->image('new-library-image.jpg', 480, 320)->store('incoming', 'local');
         $created = MediaPicker::createAsset([

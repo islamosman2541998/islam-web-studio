@@ -2,15 +2,12 @@
 
 namespace App\Support;
 
+use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Jobs\GenerateAssetConversions;
 use App\Models\Asset;
-use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Support\Enums\Width;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -19,29 +16,12 @@ use Throwable;
 class MediaPicker
 {
     /** @param array<int, string>|string $types */
-    public static function make(string $name, array|string $types = ['image', 'video', 'file']): Select
+    public static function make(string $name, array|string $types = ['image', 'video', 'file']): MediaLibraryPicker
     {
         $types = self::normalizeTypes($types);
 
-        return Select::make($name)
-            ->native(false)
-            ->searchable()
-            ->allowHtml()
-            ->preload()
-            ->optionsLimit(24)
-            ->options(fn (): array => self::options($types))
-            ->getSearchResultsUsing(fn (string $search): array => self::options($types, $search))
-            ->getOptionLabelUsing(fn ($value): ?string => filled($value) ? self::optionHtml(Asset::find($value)) : null)
-            ->createOptionForm(self::uploadForm($types))
-            ->createOptionUsing(fn (array $data): int => self::createAsset($data, $types)->getKey())
-            ->createOptionAction(fn (Action $action): Action => $action
-                ->label(Studio::text('upload_new_media'))
-                ->modalHeading(Studio::text('upload_new_media'))
-                ->modalDescription(Studio::text('media_upload_modal_help'))
-                ->modalWidth(Width::FourExtraLarge)
-                ->successNotificationTitle(Studio::text('media_upload_ready')))
-            ->noSearchResultsMessage(Studio::text('media_no_results'))
-            ->searchPrompt(Studio::text('media_search_prompt'))
+        return MediaLibraryPicker::make($name)
+            ->mediaTypes($types)
             ->helperText(Studio::text('media_help'))
             ->rules([
                 Rule::exists('assets', 'id')
@@ -121,32 +101,7 @@ class MediaPicker
     }
 
     /** @param array<int, string> $types */
-    private static function options(array $types, ?string $search = null): array
-    {
-        return self::query($types)
-            ->when(filled($search), fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
-                $query->where('name->ar', 'like', '%'.$search.'%')
-                    ->orWhere('name->en', 'like', '%'.$search.'%')
-                    ->orWhere('id', $search);
-            }))
-            ->latest('id')
-            ->limit(24)
-            ->get()
-            ->mapWithKeys(fn (Asset $asset): array => [$asset->getKey() => self::optionHtml($asset)])
-            ->all();
-    }
-
-    /** @param array<int, string> $types */
-    private static function query(array $types): Builder
-    {
-        return Asset::query()
-            ->where('visibility', 'public')
-            ->where('is_active', true)
-            ->whereIn('kind', $types);
-    }
-
-    /** @param array<int, string> $types */
-    private static function uploadForm(array $types): array
+    public static function uploadForm(array $types): array
     {
         return [
             FileUpload::make('upload_path')
@@ -169,7 +124,7 @@ class MediaPicker
     }
 
     /** @param array<int, string> $types */
-    private static function acceptedMimeTypes(array $types): array
+    public static function acceptedMimeTypes(array $types): array
     {
         $mimes = [];
         if (in_array('image', $types, true)) {
@@ -186,7 +141,7 @@ class MediaPicker
     }
 
     /** @return array<int, string> */
-    private static function normalizeTypes(array|string $types): array
+    public static function normalizeTypes(array|string $types): array
     {
         $types = is_string($types) ? explode(',', $types) : $types;
 
