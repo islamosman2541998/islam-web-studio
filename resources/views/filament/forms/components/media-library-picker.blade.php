@@ -15,7 +15,7 @@
     <div
         class="iws-media-picker"
         x-data="{
-            state: $wire.$entangle(@js($getStatePath())),
+            state: $wire.$entangle(@js($getStatePath()), true),
             search: '',
             previewId: '',
             assetIds: @js($assetIds),

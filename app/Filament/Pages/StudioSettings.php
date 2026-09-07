@@ -17,6 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\DB;
 
@@ -74,21 +75,33 @@ class StudioSettings extends Page
                 $name = $group.'.'.$key;
                 $label = app()->getLocale() === 'ar' ? $ar : $en;
                 if ($type === 'translated') {
-                    $items[] = Tabs::make($name)->label($label)->tabs([Tab::make('العربية')->schema([Textarea::make($name.'.ar')->label($ar)->maxLength(5000)->rows(3)->extraInputAttributes(['dir' => 'rtl'])]), Tab::make('English')->schema([Textarea::make($name.'.en')->label($en)->maxLength(5000)->rows(3)->extraInputAttributes(['dir' => 'ltr'])])])->columnSpanFull();
+                    $arabic = Textarea::make($name.'.ar')->label($ar)->maxLength(5000)->rows(3)->extraInputAttributes(['dir' => 'rtl']);
+                    $english = Textarea::make($name.'.en')->label($en)->maxLength(5000)->rows(3)->extraInputAttributes(['dir' => 'ltr']);
+                    if (in_array($group, ['preloader', 'seo'], true)) {
+                        $arabic->live(debounce: 300);
+                        $english->live(debounce: 300);
+                    }
+                    $items[] = Tabs::make($name)->label($label)->tabs([Tab::make('العربية')->schema([$arabic]), Tab::make('English')->schema([$english])])->columnSpanFull();
 
                     continue;
                 }
                 $field = match ($type) {
-                    'bool' => Toggle::make($name),'color' => ColorPicker::make($name)->hex()->required(),'opacity' => Slider::make($name)->range(0, 100)->step(1)->tooltips()->fillTrack(),'font_px' => Slider::make($name)->range(9, 48)->step(1)->tooltips()->fillTrack(),'asset' => MediaPicker::make($name, ['image']),'media_fit' => Select::make($name)->options(['cover' => app()->getLocale() === 'ar' ? 'ملء المساحة' : 'Cover', 'contain' => app()->getLocale() === 'ar' ? 'إظهار الصورة كاملة' : 'Contain'])->native(false)->required(),'theme' => Select::make($name)->options(['light' => Studio::text('light'), 'dark' => Studio::text('dark')]),'animation' => Select::make($name)->options(['fade' => 'Fade', 'pulse' => 'Pulse', 'draw' => 'Draw']),'arabic_font' => Select::make($name)->options(FontRegistry::arabicOptions())->native(false)->searchable(),'english_font' => Select::make($name)->options(FontRegistry::englishOptions())->native(false)->searchable(),'font_weight' => Select::make($name)->options(['500' => app()->getLocale() === 'ar' ? 'متوسط' : 'Medium', '600' => app()->getLocale() === 'ar' ? 'شبه عريض' : 'Semi bold', '700' => app()->getLocale() === 'ar' ? 'عريض' : 'Bold'])->native(false)->required(),'font_size' => Select::make($name)->options(['12' => '12 px', '13' => '13 px', '14' => '14 px'])->native(false)->required(),'code' => Textarea::make($name)->rows(8)->maxLength(20000)->helperText(Studio::text('scripts_warning'))->columnSpanFull(),'socials' => Repeater::make($name)->schema([TextInput::make('label')->required()->maxLength(40), TextInput::make('url')->url()->required()->maxLength(2048)])->columns(2)->defaultItems(0)->columnSpanFull(),default => TextInput::make($name)->maxLength(255)
+                    'bool' => Toggle::make($name),'color' => ColorPicker::make($name)->hex()->required(),'opacity' => Slider::make($name)->range(0, 100)->step(1)->tooltips()->fillTrack(),'font_px' => Slider::make($name)->range(9, 48)->step(1)->tooltips()->fillTrack(),'preloader_size' => Slider::make($name)->range(40, 240)->step(1)->tooltips()->fillTrack(),'radius' => Slider::make($name)->range(0, 48)->step(1)->tooltips()->fillTrack(),'asset' => MediaPicker::make($name, ['image']),'media_fit' => Select::make($name)->options(['cover' => app()->getLocale() === 'ar' ? 'ملء المساحة' : 'Cover', 'contain' => app()->getLocale() === 'ar' ? 'إظهار الصورة كاملة' : 'Contain'])->native(false)->required(),'preloader_background' => Select::make($name)->options(['color' => app()->getLocale() === 'ar' ? 'لون' : 'Color', 'image' => app()->getLocale() === 'ar' ? 'صورة' : 'Image'])->native(false)->required(),'theme' => Select::make($name)->options(['light' => Studio::text('light'), 'dark' => Studio::text('dark')]),'animation' => Select::make($name)->options(['fade' => app()->getLocale() === 'ar' ? 'ظهور واختفاء' : 'Fade', 'pulse' => app()->getLocale() === 'ar' ? 'نبض هادئ' : 'Pulse', 'scale' => app()->getLocale() === 'ar' ? 'تكبير ناعم' : 'Soft scale', 'float' => app()->getLocale() === 'ar' ? 'حركة عائمة' : 'Float', 'spin' => app()->getLocale() === 'ar' ? 'دوران' : 'Spin', 'draw' => app()->getLocale() === 'ar' ? 'رسم تدريجي' : 'Reveal'])->native(false)->required(),'wait_duration' => TextInput::make($name),'arabic_font' => Select::make($name)->options(FontRegistry::arabicOptions())->native(false)->searchable(),'english_font' => Select::make($name)->options(FontRegistry::englishOptions())->native(false)->searchable(),'font_weight' => Select::make($name)->options(['500' => app()->getLocale() === 'ar' ? 'متوسط' : 'Medium', '600' => app()->getLocale() === 'ar' ? 'شبه عريض' : 'Semi bold', '700' => app()->getLocale() === 'ar' ? 'عريض' : 'Bold'])->native(false)->required(),'font_size' => Select::make($name)->options(['12' => '12 px', '13' => '13 px', '14' => '14 px'])->native(false)->required(),'code' => Textarea::make($name)->rows(8)->maxLength(20000)->helperText(Studio::text('scripts_warning'))->columnSpanFull(),'socials' => Repeater::make($name)->schema([TextInput::make('label')->required()->maxLength(40), TextInput::make('url')->url()->required()->maxLength(2048)])->columns(2)->defaultItems(0)->columnSpanFull(),default => TextInput::make($name)->maxLength(255)
                 };
                 if ($type === 'email') {
                     $field->email();
                 }if ($type === 'duration') {
                     $field->integer()->minValue(100)->maxValue(1200);
+                }if ($type === 'wait_duration') {
+                    $field->integer()->minValue(0)->maxValue(5000)->suffix('ms');
                 }if ($type === 'opacity') {
                     $field->helperText(Studio::text('opacity_help'));
                 }if ($type === 'font_px') {
                     $field->helperText(Studio::text('font_size_help'));
+                }if ($type === 'preloader_size') {
+                    $field->helperText(Studio::text('preloader_logo_size_help'));
+                }if ($type === 'radius') {
+                    $field->helperText(Studio::text('preloader_radius_help'));
                 }if (in_array($type, ['phone', 'digits'])) {
                     $field->rules(['nullable', 'regex:/^[0-9]{5,20}$/']);
                 }if ($type === 'ga') {
@@ -97,8 +110,16 @@ class StudioSettings extends Page
                     $field->rules(['nullable', 'regex:/^[A-Za-z0-9_-]+$/']);
                 }if ($type === 'url') {
                     $field->maxLength(2048)->helperText(app()->getLocale() === 'ar' ? 'استخدم {locale} داخل الرابط لاستبدالها بلغة الصفحة، مثال: /{locale}/about' : 'Use {locale} in the URL to insert the current language, for example: /{locale}/about');
+                }if (in_array($group, ['preloader', 'seo'], true)) {
+                    $field->live(debounce: 250);
                 }$items[] = $field->label($label);
-            }$tabs[] = Tab::make(Studio::text($group))->schema($items)->columns(2);
+            }
+            if ($group === 'preloader') {
+                $items[] = View::make('filament.pages.partials.preloader-preview')->columnSpanFull();
+            } elseif ($group === 'seo') {
+                $items[] = View::make('filament.pages.partials.seo-preview')->columnSpanFull();
+            }
+            $tabs[] = Tab::make(Studio::text($group))->schema($items)->columns(2);
         }
 
         return $schema->components([Tabs::make('settings')->tabs($tabs)->persistTabInQueryString()])->statePath('data');

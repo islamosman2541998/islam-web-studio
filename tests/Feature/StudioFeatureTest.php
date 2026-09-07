@@ -42,6 +42,7 @@ use App\Support\MediaPicker;
 use App\Support\MediaPipeline;
 use App\Support\MenuResolver;
 use App\Support\ModuleRegistry;
+use App\Support\Preloader;
 use App\Support\SettingsRegistry;
 use App\Support\Studio;
 use Filament\Actions\Testing\TestAction;
@@ -240,6 +241,77 @@ class StudioFeatureTest extends TestCase
         $this->get('/')->assertRedirect();
         $this->get('/sitemap.xml')->assertOk();
         $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /');
+    }
+
+    public function test_google_metadata_uses_managed_home_settings_and_complete_structured_data(): void
+    {
+        config(['studio.demo' => false]);
+        Storage::fake('public');
+        $logo = Asset::factory()->create(['name' => ['ar' => 'لوجو البحث', 'en' => 'Search logo']]);
+        $logo->addMedia(UploadedFile::fake()->image('search-logo.png', 600, 600))->toMediaCollection('original', 'public');
+        Page::factory()->create([
+            'template' => 'home',
+            'status' => 'published',
+            'title' => ['ar' => 'عنوان الصفحة المرئي', 'en' => 'Visible page heading'],
+            'meta_title' => ['ar' => '', 'en' => ''],
+            'meta_description' => ['ar' => '', 'en' => ''],
+        ]);
+        Studio::put('seo.title', ['ar' => 'حلول رقمية احترافية | إسلام ويب ستوديو', 'en' => 'Professional digital solutions | Islam Web Studio'], 'seo');
+        Studio::put('seo.description', ['ar' => 'نطور مواقع ومتاجر وأنظمة تساعد مشروعك على النمو.', 'en' => 'We build websites, commerce and systems that help businesses grow.'], 'seo');
+        Studio::put('seo.logo', $logo->id, 'seo');
+        Studio::flush();
+
+        $this->get('/ar')
+            ->assertOk()
+            ->assertSee('<title>حلول رقمية احترافية | إسلام ويب ستوديو</title>', false)
+            ->assertSee('content="نطور مواقع ومتاجر وأنظمة تساعد مشروعك على النمو."', false)
+            ->assertSee('max-image-preview:large', false)
+            ->assertSee('property="og:site_name"', false)
+            ->assertSee('name="twitter:title"', false)
+            ->assertSee('rel="apple-touch-icon"', false)
+            ->assertSee('"@type":"Organization"', false)
+            ->assertSee('"@type":"WebSite"', false)
+            ->assertSee('"@type":"WebPage"', false)
+            ->assertSee('"logo":', false)
+            ->assertSee('"sameAs":', false);
+    }
+
+    public function test_preloader_design_is_fully_managed_and_rendered_for_loading_and_navigation(): void
+    {
+        $preloader = SettingsRegistry::groups()['preloader'];
+        foreach (['background_type', 'background_color', 'background_opacity', 'background_image', 'background_image_opacity', 'background_fit', 'panel_enabled', 'panel_color', 'panel_opacity', 'panel_radius', 'logo_width', 'show_progress', 'progress_color', 'minimum_duration'] as $key) {
+            $this->assertArrayHasKey($key, $preloader);
+        }
+
+        Studio::put('preloader.background_color', '#123456', 'preloader');
+        Studio::put('preloader.background_opacity', 55, 'preloader');
+        Studio::put('preloader.panel_enabled', true, 'preloader');
+        Studio::put('preloader.panel_color', '#010203', 'preloader');
+        Studio::put('preloader.panel_opacity', 70, 'preloader');
+        Studio::put('preloader.panel_radius', 32, 'preloader');
+        Studio::put('preloader.logo_width', 120, 'preloader');
+        Studio::put('preloader.show_text', true, 'preloader');
+        Studio::put('preloader.text', ['ar' => 'جاري تجهيز الموقع', 'en' => 'Preparing the website'], 'preloader');
+        Studio::put('preloader.animation', 'float', 'preloader');
+        Studio::put('preloader.minimum_duration', 975, 'preloader');
+        Studio::flush();
+
+        $resolved = Preloader::make();
+        $this->assertSame('rgba(18,52,86,0.55)', $resolved['background_color']);
+        $this->assertSame('rgba(1,2,3,0.7)', $resolved['panel_color']);
+        $this->assertSame(120, $resolved['logo_width']);
+
+        $this->get('/ar')
+            ->assertOk()
+            ->assertSee('id="preloader"', false)
+            ->assertSee('class="studio-loader page-transition"', false)
+            ->assertSee('data-animation="float"', false)
+            ->assertSee('--loader-background-color:rgba(18,52,86,0.55)', false)
+            ->assertSee('--loader-panel:rgba(1,2,3,0.7)', false)
+            ->assertSee('--loader-radius:32px', false)
+            ->assertSee('--loader-logo-width:120px', false)
+            ->assertSee('data-loader-delay="975"', false)
+            ->assertSee('جاري تجهيز الموقع');
     }
 
     public function test_project_detail_combines_main_media_and_gallery_without_public_demo_labels(): void
