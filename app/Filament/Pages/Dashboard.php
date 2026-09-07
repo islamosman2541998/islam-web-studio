@@ -8,7 +8,7 @@ class Dashboard extends \Filament\Pages\Dashboard
 {
     public function getTitle(): string
     {
-        return Studio::text('welcome');
+        return Studio::text('dashboard_title');
     }
 
     public static function getNavigationLabel(): string
@@ -18,6 +18,6 @@ class Dashboard extends \Filament\Pages\Dashboard
 
     public function getSubheading(): ?string
     {
-        return config('studio.demo') ? Studio::text('demo_notice') : null;
+        return Studio::text('dashboard_subheading');
     }
 }

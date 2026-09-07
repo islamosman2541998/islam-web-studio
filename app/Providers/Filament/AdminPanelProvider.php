@@ -7,6 +7,8 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\LeadPipeline;
 use App\Filament\Pages\MenuBuilder;
 use App\Filament\Pages\StudioSettings;
+use App\Filament\Widgets\ContentStatusChart;
+use App\Filament\Widgets\LeadActivityChart;
 use App\Filament\Widgets\StudioStats;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -42,7 +44,7 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotifications()->databaseNotificationsPolling('10s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->pages([Dashboard::class, StudioSettings::class, MenuBuilder::class, LeadPipeline::class])
-            ->widgets([StudioStats::class])
+            ->widgets([StudioStats::class, LeadActivityChart::class, ContentStatusChart::class])
             ->renderHook(PanelsRenderHook::HEAD_END, fn () => view('filament.tokens'))
             ->renderHook(PanelsRenderHook::BODY_END, fn () => view('filament.scripts'))
             ->renderHook(PanelsRenderHook::TOPBAR_END, fn () => view('filament.locale'))

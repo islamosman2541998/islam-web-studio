@@ -14,6 +14,9 @@ use App\Filament\Resources\Services\Pages\ListRecords;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Resources\Slides\Pages\CreateRecord as CreateSlideRecord;
 use App\Filament\Resources\Users\Pages\EditUser;
+use App\Filament\Widgets\ContentStatusChart;
+use App\Filament\Widgets\LeadActivityChart;
+use App\Filament\Widgets\StudioStats;
 use App\Jobs\BuildExport;
 use App\Livewire\BrowseContent;
 use App\Livewire\QuoteForm;
@@ -152,6 +155,75 @@ class StudioFeatureTest extends TestCase
             ->assertSee('--studio-login-bg: #123456;', false)
             ->assertSee('--studio-login-overlay: rgba(18,52,86,0);', false)
             ->assertSee('--studio-login-card: rgba(171,205,239,0.55);', false);
+    }
+
+    public function test_every_login_card_text_group_has_configurable_color_and_size(): void
+    {
+        $controls = [
+            'title' => ['#112233', 31, 'title'],
+            'description' => ['#223344', 18, 'description'],
+            'label' => ['#334455', 16, 'label'],
+            'input' => ['#445566', 17, 'input'],
+            'button' => ['#556677', 15, 'button-text'],
+            'link' => ['#667788', 14, 'link'],
+            'footer' => ['#778899', 12, 'footer'],
+        ];
+        $login = SettingsRegistry::groups()['login'];
+
+        foreach ($controls as $area => [$color, $size]) {
+            $this->assertArrayHasKey($area.'_text_color', $login);
+            $this->assertArrayHasKey($area.'_text_size', $login);
+            Studio::put('login.'.$area.'_text_color', $color, 'login');
+            Studio::put('login.'.$area.'_text_size', $size, 'login');
+        }
+        Studio::flush();
+
+        $response = $this->get('/admin/login')->assertOk();
+        foreach ($controls as [$color, $size, $cssArea]) {
+            $response
+                ->assertSee('--studio-login-'.$cssArea.'-color: '.$color.';', false)
+                ->assertSee('--studio-login-'.$cssArea.'-size: '.$size.'px;', false);
+        }
+    }
+
+    public function test_dashboard_uses_live_metrics_and_professional_charts_without_demo_copy(): void
+    {
+        $owner = $this->owner();
+        Service::factory()->create(['status' => 'published']);
+        Service::factory()->create(['status' => 'draft']);
+        Project::factory()->create(['status' => 'published']);
+        Post::factory()->create(['status' => 'draft']);
+        Lead::factory()->create(['status' => 'new', 'created_at' => today()]);
+        Lead::factory()->create(['status' => 'contacted', 'created_at' => today()->subDays(3)]);
+
+        $this->actingAs($owner)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee(Studio::text('dashboard_title'))
+            ->assertSee(Studio::text('dashboard_subheading'))
+            ->assertDontSee(Studio::text('demo_notice'));
+
+        Livewire::actingAs($owner)
+            ->test(StudioStats::class)
+            ->assertSee(Studio::text('dashboard_key_metrics'))
+            ->assertSee(Studio::text('dashboard_new_waiting', ['count' => 1]));
+
+        Livewire::actingAs($owner)
+            ->test(LeadActivityChart::class)
+            ->assertSee(Studio::text('dashboard_lead_activity'));
+
+        Livewire::actingAs($owner)
+            ->test(ContentStatusChart::class)
+            ->assertSee(Studio::text('dashboard_content_status'));
+
+        $activityChart = app(LeadActivityChart::class);
+        $activityData = (fn (): array => $this->getData())->bindTo($activityChart, $activityChart)();
+        $this->assertSame(2, array_sum($activityData['datasets'][0]['data']));
+
+        $contentChart = app(ContentStatusChart::class);
+        $contentData = (fn (): array => $this->getData())->bindTo($contentChart, $contentChart)();
+        $this->assertSame([1, 1, 0], $contentData['datasets'][0]['data']);
+        $this->assertSame([1, 0, 1], $contentData['datasets'][1]['data']);
     }
 
     public function test_public_routes_render_in_both_languages_with_seo(): void
