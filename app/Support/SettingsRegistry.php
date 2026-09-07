@@ -33,7 +33,12 @@ class SettingsRegistry
             ],
             'login' => [
                 'title' => ['translated', 'عنوان الترحيب', 'Welcome title', ['ar' => 'أهلًا بيك في الاستوديو', 'en' => 'Welcome to the studio']], 'description' => ['translated', 'وصف الترحيب', 'Welcome description', ['ar' => 'كل تفاصيل شغلك، في مكان واحد.', 'en' => 'Every detail of your work, in one place.']],
-                'background' => ['color', 'لون الخلفية', 'Background', '#0A3323'], 'background_image' => ['asset', 'صورة الخلفية', 'Background image', null], 'logo' => ['asset', 'اللوجو', 'Logo', null], 'show_logo' => ['bool', 'إظهار اللوجو', 'Show logo', true], 'show_description' => ['bool', 'إظهار الوصف', 'Show description', true], 'show_remember' => ['bool', 'إظهار تذكرني', 'Show remember me', true], 'show_site_link' => ['bool', 'إظهار العودة للموقع', 'Show back to website', true],
+                'background' => ['color', 'لون الطبقة فوق الخلفية', 'Background overlay color', '#0A3323'],
+                'background_overlay_opacity' => ['opacity', 'شفافية اللون فوق الخلفية', 'Background overlay opacity', 79],
+                'background_image' => ['asset', 'صورة الخلفية', 'Background image', null],
+                'card_background' => ['color', 'لون كارت تسجيل الدخول', 'Login card color', '#FFFDF4'],
+                'card_opacity' => ['opacity', 'شفافية كارت تسجيل الدخول', 'Login card opacity', 100],
+                'logo' => ['asset', 'اللوجو', 'Logo', null], 'show_logo' => ['bool', 'إظهار اللوجو', 'Show logo', true], 'show_description' => ['bool', 'إظهار الوصف', 'Show description', true], 'show_remember' => ['bool', 'إظهار تذكرني', 'Show remember me', true], 'show_site_link' => ['bool', 'إظهار العودة للموقع', 'Show back to website', true],
             ],
             'preloader' => [
                 'enabled' => ['bool', 'تشغيل شاشة التحميل', 'Enable preloader', true], 'transitions' => ['bool', 'الانتقالات بين الصفحات', 'Page transitions', true], 'logo' => ['asset', 'لوجو التحميل', 'Preloader logo', null], 'animation' => ['animation', 'نوع الحركة', 'Animation', 'fade'], 'duration' => ['duration', 'مدة الحركة بالمللي ثانية', 'Animation duration (ms)', 400],

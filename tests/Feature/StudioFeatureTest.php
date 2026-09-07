@@ -130,6 +130,30 @@ class StudioFeatureTest extends TestCase
             ->assertSee("--font-family: 'Cairo';", false);
     }
 
+    public function test_login_overlay_and_card_appearance_are_configurable(): void
+    {
+        $login = SettingsRegistry::groups()['login'];
+
+        $this->assertSame(79, $login['background_overlay_opacity'][3]);
+        $this->assertSame('#FFFDF4', $login['card_background'][3]);
+        $this->assertSame(100, $login['card_opacity'][3]);
+        $this->assertSame('rgba(10,51,35,0.79)', Studio::rgba('#0A3323', 79, '#000000'));
+        $this->assertSame('rgba(10,51,35,0)', Studio::rgba('#0A3323', -20, '#000000'));
+        $this->assertSame('rgba(255,253,244,1)', Studio::rgba('#FFFDF4', 200, '#000000'));
+
+        Studio::put('login.background', '#123456', 'login');
+        Studio::put('login.background_overlay_opacity', 0, 'login');
+        Studio::put('login.card_background', '#ABCDEF', 'login');
+        Studio::put('login.card_opacity', 55, 'login');
+        Studio::flush();
+
+        $this->get('/admin/login')
+            ->assertOk()
+            ->assertSee('--studio-login-bg: #123456;', false)
+            ->assertSee('--studio-login-overlay: rgba(18,52,86,0);', false)
+            ->assertSee('--studio-login-card: rgba(171,205,239,0.55);', false);
+    }
+
     public function test_public_routes_render_in_both_languages_with_seo(): void
     {
         Page::factory()->create(['template' => 'about', 'status' => 'published']);

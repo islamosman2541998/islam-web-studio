@@ -31,6 +31,7 @@ return [
     'select_media' => 'Select',
     'select_this_media' => 'Select this media',
     'media_library_empty' => 'The media library is empty',
+    'opacity_help' => '0% removes the color, and 100% makes it fully solid.',
     'slug_help' => 'Letters, numbers and hyphens. Each language has its own URL.',
     'visibility_help' => 'Visibility is locked after upload. Upload a new copy to change its visibility.',
     'category_id_help' => 'For automatic rules: category ID, or leave empty for all categories.',

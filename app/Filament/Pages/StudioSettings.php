@@ -9,6 +9,7 @@ use App\Support\Studio;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Slider;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -78,12 +79,14 @@ class StudioSettings extends Page
                     continue;
                 }
                 $field = match ($type) {
-                    'bool' => Toggle::make($name),'color' => ColorPicker::make($name)->hex()->required(),'asset' => MediaPicker::make($name, ['image']),'media_fit' => Select::make($name)->options(['cover' => app()->getLocale() === 'ar' ? 'ملء المساحة' : 'Cover', 'contain' => app()->getLocale() === 'ar' ? 'إظهار الصورة كاملة' : 'Contain'])->native(false)->required(),'theme' => Select::make($name)->options(['light' => Studio::text('light'), 'dark' => Studio::text('dark')]),'animation' => Select::make($name)->options(['fade' => 'Fade', 'pulse' => 'Pulse', 'draw' => 'Draw']),'arabic_font' => Select::make($name)->options(FontRegistry::arabicOptions())->native(false)->searchable(),'english_font' => Select::make($name)->options(FontRegistry::englishOptions())->native(false)->searchable(),'font_weight' => Select::make($name)->options(['500' => app()->getLocale() === 'ar' ? 'متوسط' : 'Medium', '600' => app()->getLocale() === 'ar' ? 'شبه عريض' : 'Semi bold', '700' => app()->getLocale() === 'ar' ? 'عريض' : 'Bold'])->native(false)->required(),'font_size' => Select::make($name)->options(['12' => '12 px', '13' => '13 px', '14' => '14 px'])->native(false)->required(),'code' => Textarea::make($name)->rows(8)->maxLength(20000)->helperText(Studio::text('scripts_warning'))->columnSpanFull(),'socials' => Repeater::make($name)->schema([TextInput::make('label')->required()->maxLength(40), TextInput::make('url')->url()->required()->maxLength(2048)])->columns(2)->defaultItems(0)->columnSpanFull(),default => TextInput::make($name)->maxLength(255)
+                    'bool' => Toggle::make($name),'color' => ColorPicker::make($name)->hex()->required(),'opacity' => Slider::make($name)->range(0, 100)->step(1)->tooltips()->fillTrack(),'asset' => MediaPicker::make($name, ['image']),'media_fit' => Select::make($name)->options(['cover' => app()->getLocale() === 'ar' ? 'ملء المساحة' : 'Cover', 'contain' => app()->getLocale() === 'ar' ? 'إظهار الصورة كاملة' : 'Contain'])->native(false)->required(),'theme' => Select::make($name)->options(['light' => Studio::text('light'), 'dark' => Studio::text('dark')]),'animation' => Select::make($name)->options(['fade' => 'Fade', 'pulse' => 'Pulse', 'draw' => 'Draw']),'arabic_font' => Select::make($name)->options(FontRegistry::arabicOptions())->native(false)->searchable(),'english_font' => Select::make($name)->options(FontRegistry::englishOptions())->native(false)->searchable(),'font_weight' => Select::make($name)->options(['500' => app()->getLocale() === 'ar' ? 'متوسط' : 'Medium', '600' => app()->getLocale() === 'ar' ? 'شبه عريض' : 'Semi bold', '700' => app()->getLocale() === 'ar' ? 'عريض' : 'Bold'])->native(false)->required(),'font_size' => Select::make($name)->options(['12' => '12 px', '13' => '13 px', '14' => '14 px'])->native(false)->required(),'code' => Textarea::make($name)->rows(8)->maxLength(20000)->helperText(Studio::text('scripts_warning'))->columnSpanFull(),'socials' => Repeater::make($name)->schema([TextInput::make('label')->required()->maxLength(40), TextInput::make('url')->url()->required()->maxLength(2048)])->columns(2)->defaultItems(0)->columnSpanFull(),default => TextInput::make($name)->maxLength(255)
                 };
                 if ($type === 'email') {
                     $field->email();
                 }if ($type === 'duration') {
                     $field->integer()->minValue(100)->maxValue(1200);
+                }if ($type === 'opacity') {
+                    $field->helperText(Studio::text('opacity_help'));
                 }if (in_array($type, ['phone', 'digits'])) {
                     $field->rules(['nullable', 'regex:/^[0-9]{5,20}$/']);
                 }if ($type === 'ga') {

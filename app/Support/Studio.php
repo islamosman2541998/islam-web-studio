@@ -95,6 +95,16 @@ class Studio
         return preg_match('/^#[0-9a-fA-F]{6}$/', (string) $color) ? $color : $fallback;
     }
 
+    public static function rgba(?string $color, mixed $opacity, string $fallback): string
+    {
+        [$red, $green, $blue] = sscanf(self::color($color, $fallback), '#%02x%02x%02x');
+        $opacity = is_numeric($opacity) ? (float) $opacity : 100;
+        $alpha = max(0, min(100, $opacity)) / 100;
+        $alpha = rtrim(rtrim(number_format($alpha, 2, '.', ''), '0'), '.');
+
+        return sprintf('rgba(%d,%d,%d,%s)', $red, $green, $blue, $alpha);
+    }
+
     public static function palette(string $color): array
     {
         $rgb = sscanf(self::color($color, '#105666'), '#%02x%02x%02x');
