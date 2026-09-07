@@ -12,6 +12,7 @@ use App\Filament\Resources\Services\Pages\EditRecord;
 use App\Filament\Resources\Services\Pages\ListRecords;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Resources\Slides\Pages\CreateRecord as CreateSlideRecord;
+use App\Filament\Resources\Users\Pages\EditUser;
 use App\Jobs\BuildExport;
 use App\Livewire\BrowseContent;
 use App\Livewire\QuoteForm;
@@ -43,6 +44,7 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -402,6 +404,28 @@ class StudioFeatureTest extends TestCase
         $this->assertDatabaseHas('leads', ['email' => 'visitor@example.test', 'status' => 'new', 'source' => 'form']);
     }
 
+    public function test_owner_can_update_their_password_and_receives_a_success_notification(): void
+    {
+        $owner = $this->owner();
+        $ownerRoleId = (string) $owner->roles()->firstOrFail()->id;
+
+        Livewire::actingAs($owner)
+            ->test(EditUser::class, ['record' => $owner->id])
+            ->fillForm([
+                'name' => $owner->name,
+                'email' => $owner->email,
+                'password' => 'A-new-secure-password-2026',
+                'roles' => [$ownerRoleId],
+                'locale' => 'ar',
+                'is_active' => true,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors()
+            ->assertNotified(Studio::text('saved'));
+
+        $this->assertTrue(Hash::check('A-new-secure-password-2026', $owner->refresh()->password));
+    }
+
     public function test_quote_form_sends_dynamic_toast_and_database_notification(): void
     {
         $recipient = $this->userWith(['leads.view']);
@@ -748,12 +772,15 @@ class StudioFeatureTest extends TestCase
             ->assertSee('aria-label="Facebook"', false)
             ->assertSee('aria-label="Instagram"', false)
             ->assertSee('aria-label="TikTok"', false)
+            ->assertSee('class="whatsapp-float"', false)
+            ->assertSee('href="https://wa.me/201114292011"', false)
             ->assertDontSee('demo-note', false)
             ->assertDontSee(Studio::text('demo_notice'));
 
         $this->assertSame(4, substr_count($response->getContent(), 'data-footer-column='));
         $this->assertSame('islamwebstudio@info.com', SettingsRegistry::defaults()['general.email']);
         $this->assertCount(3, SettingsRegistry::defaults()['general.socials']);
+        $this->assertSame('201114292011', Studio::whatsappNumber());
     }
 
     public function test_inactive_user_cannot_access_dashboard_and_expired_export_is_unavailable(): void

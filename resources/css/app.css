@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './toasts.css';
+@import './whatsapp.css';
 @import '@fontsource/ibm-plex-sans-arabic/400.css';
 @import '@fontsource/ibm-plex-sans-arabic/600.css';
 @import '../../node_modules/@fontsource/cairo/arabic-400.css';

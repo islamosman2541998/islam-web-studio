@@ -74,6 +74,22 @@ class Studio
         return preg_match('~^(https?://|mailto:|tel:)~i', $url) ? $url : '#';
     }
 
+    public static function whatsappNumber(): ?string
+    {
+        $rawNumber = self::setting('general.whatsapp') ?: self::setting('general.phone');
+        $number = preg_replace('/\D+/', '', (string) $rawNumber);
+
+        if (str_starts_with($number, '00')) {
+            $number = substr($number, 2);
+        }
+
+        if (str_starts_with($number, '0')) {
+            $number = '20'.substr($number, 1);
+        }
+
+        return preg_match('/^[1-9][0-9]{7,14}$/', $number) ? $number : null;
+    }
+
     public static function color(?string $color, string $fallback): string
     {
         return preg_match('/^#[0-9a-fA-F]{6}$/', (string) $color) ? $color : $fallback;
