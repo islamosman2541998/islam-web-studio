@@ -101,7 +101,7 @@
             @if($record->live_url)
                 <div class="project-showcase-link">
                     <a class="button" href="{{ \App\Support\Studio::safeUrl($record->live_url) }}" target="_blank" rel="noopener noreferrer">
-                        @t('visit_project') ↗
+                        @t('visit_project') <x-arrow-up-right />
                     </a>
                 </div>
             @endif

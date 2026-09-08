@@ -3,12 +3,6 @@
 
     $assets = $field->getMediaAssets();
     $modalId = $field->getModalId();
-    $firstAssetId = (string) ($assets->first()?->getKey() ?? '');
-    $assetIds = $assets->map(fn ($asset): string => (string) $asset->getKey())->values()->all();
-    $searchItems = $assets->map(fn ($asset): array => [
-        'id' => (string) $asset->getKey(),
-        'text' => mb_strtolower(trim($asset->titleText('ar').' '.$asset->titleText('en').' '.$asset->kind.' '.$asset->getKey())),
-    ])->values()->all();
 @endphp
 
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
@@ -18,16 +12,25 @@
             state: $wire.$entangle(@js($getStatePath()), true),
             search: '',
             previewId: '',
-            assetIds: @js($assetIds),
-            searchItems: @js($searchItems),
             init() {
-                this.previewId = String(this.state || @js($firstAssetId))
+                this.previewId = String(this.state || this.firstAssetId())
+                this.$watch('state', (value) => {
+                    if (value) {
+                        this.previewId = String(value)
+                    }
+                })
+            },
+            assetIds() {
+                return [...this.$root.querySelectorAll('[data-asset-id]')].map((el) => el.dataset.assetId)
+            },
+            firstAssetId() {
+                return this.$root.querySelector('[data-asset-id]')?.dataset.assetId ?? ''
             },
             isSelected(id) {
                 return String(this.state ?? '') === String(id)
             },
             hasSelection() {
-                return this.assetIds.includes(String(this.state ?? ''))
+                return this.assetIds().includes(String(this.state ?? ''))
             },
             matches(text) {
                 return ! this.search.trim() || text.includes(this.search.trim().toLocaleLowerCase())
@@ -35,11 +38,11 @@
             hasMatches() {
                 const term = this.search.trim().toLocaleLowerCase()
 
-                return ! term || this.searchItems.some((item) => item.text.includes(term))
+                return ! term || [...this.$root.querySelectorAll('[data-search]')].some((el) => el.dataset.search.includes(term))
             },
             openLibrary() {
                 this.search = ''
-                this.previewId = String(this.state || @js($firstAssetId))
+                this.previewId = String(this.state || this.firstAssetId())
                 this.$dispatch('open-modal', { id: @js($modalId) })
             },
             selectAsset(id) {
@@ -114,7 +117,6 @@
             :description="Studio::text('media_library_help')"
             close-button
             sticky-header
-            teleport="body"
             width="7xl"
             class="iws-media-library-modal"
         >
@@ -152,6 +154,9 @@
                                     <article
                                         class="iws-media-library__card"
                                         role="listitem"
+                                        wire:key="iws-media-card-{{ $asset->getKey() }}"
+                                        data-asset-id="{{ $asset->getKey() }}"
+                                        data-search="{{ $searchText }}"
                                         x-show="matches(@js($searchText))"
                                         x-bind:class="{ 'is-selected': isSelected(@js((string) $asset->getKey())), 'is-previewing': previewId === @js((string) $asset->getKey()) }"
                                     >

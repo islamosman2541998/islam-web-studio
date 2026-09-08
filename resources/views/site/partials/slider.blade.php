@@ -44,7 +44,7 @@
                             @endif
                             @if(filled($slideButtonText) && filled($slide->button_url))
                                 <a class="button hero-button" href="{{ \App\Support\Studio::safeUrl(str_replace('{locale}', app()->getLocale(), $slide->button_url ?? '')) }}" wire:navigate>
-                                    <span>{{ $slideButtonText }}</span><span aria-hidden="true">↗</span>
+                                    <span>{{ $slideButtonText }}</span><x-arrow-up-right />
                                 </a>
                             @endif
                             </div>
@@ -71,7 +71,7 @@
     <div class="shell hero-layout">
         <div class="hero-content">
             <h3 class="slide-title">{{ \App\Support\Studio::translated('general.tagline') }}</h3>
-            <a class="button hero-button" href="{{ route('contact', ['locale' => app()->getLocale()]) }}" wire:navigate>@t('request_quote') <span aria-hidden="true">↗</span></a>
+            <a class="button hero-button" href="{{ route('contact', ['locale' => app()->getLocale()]) }}" wire:navigate>@t('request_quote') <x-arrow-up-right /></a>
         </div>
     </div>
 </section>

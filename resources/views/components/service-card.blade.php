@@ -10,6 +10,6 @@
     <div class="service-card-body">
         <h3>{{ $service->titleText() }}</h3>
         <p>{{ $service->text('short_description') }}</p>
-        <span class="card-link">@t('explore_service') <span aria-hidden="true">↗</span></span>
+        <span class="card-link">@t('explore_service') <x-arrow-up-right /></span>
     </div>
 </a>

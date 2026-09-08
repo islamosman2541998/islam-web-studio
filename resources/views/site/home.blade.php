@@ -37,7 +37,7 @@
             @if(filled($homeSections['services']['title']))<h3>{{ $homeSections['services']['title'] }}</h3>@endif
             @if(filled($homeSections['services']['description']))<p>{{ $homeSections['services']['description'] }}</p>@endif
         </div>
-        <a class="text-link" href="{{ route('services.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <span aria-hidden="true">↗</span></a>
+        <a class="text-link" href="{{ route('services.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a>
     </header>
     <div class="services-grid">@foreach($services as $service)<x-service-card :service="$service" :number="$loop->iteration" />@endforeach</div>
 </section>
@@ -49,7 +49,7 @@
                 @if(filled($homeSections['projects']['title']))<h2>{{ $homeSections['projects']['title'] }}</h2>@endif
                 @if(filled($homeSections['projects']['description']))<p>{{ $homeSections['projects']['description'] }}</p>@endif
             </div>
-            <a class="text-link" href="{{ route('projects.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') ↗</a>
+            <a class="text-link" href="{{ route('projects.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a>
         </div>
         <div class="projects-grid">@foreach($projects as $project)<x-project-card :project="$project" />@endforeach</div>
     </div>
@@ -93,7 +93,7 @@
             <p class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::translated('home.intro_text')) }}</p>
         @endif
         @if(\App\Support\Studio::setting('home.intro_link_enabled', true) && filled($introLinkText) && $introLink !== '#')
-            <a class="text-link" href="{{ $introLink }}" @if(! $introLinkNewTab && str_starts_with($introLinkRaw, '/')) wire:navigate @endif @if($introLinkNewTab) target="_blank" rel="noopener noreferrer" @endif>{{ $introLinkText }} ↗</a>
+                    <a class="text-link" href="{{ $introLink }}" @if(! $introLinkNewTab && str_starts_with($introLinkRaw, '/')) wire:navigate @endif @if($introLinkNewTab) target="_blank" rel="noopener noreferrer" @endif>{{ $introLinkText }} <x-arrow-up-right /></a>
         @endif
         @if(filled($introFounderLabel) || filled($introSignature))
             <div class="intro-signature">
@@ -106,5 +106,5 @@
 @endif
 <section class="section process-section"><div class="shell process-grid"><div><span class="eyebrow">03{{ filled($homeSections['process']['label']) ? ' / '.$homeSections['process']['label'] : '' }}</span>@if(filled($homeSections['process']['title']))<h2>{{ $homeSections['process']['title'] }}</h2>@endif @if(filled($homeSections['process']['description']))<p>{{ $homeSections['process']['description'] }}</p>@endif</div>@include('site.partials.process')</div></section>
 <section class="section shell"><div class="section-heading"><span class="eyebrow">04{{ filled($homeSections['testimonials']['label']) ? ' / '.$homeSections['testimonials']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['testimonials']['title']))<h2>{{ $homeSections['testimonials']['title'] }}</h2>@endif @if(filled($homeSections['testimonials']['description']))<p>{{ $homeSections['testimonials']['description'] }}</p>@endif</div></div><div class="swiper reviews-swiper" data-studio-swiper data-swiper-kind="reviews" data-drag="1"><div class="swiper-wrapper">@foreach($testimonials as $review)<div class="swiper-slide"><x-testimonial :review="$review" /></div>@endforeach</div><div class="slider-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></div></section>
-<section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05{{ filled($homeSections['posts']['label']) ? ' / '.$homeSections['posts']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['posts']['title']))<h2>{{ $homeSections['posts']['title'] }}</h2>@endif @if(filled($homeSections['posts']['description']))<p>{{ $homeSections['posts']['description'] }}</p>@endif</div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') ↗</a></div><div class="posts-grid">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div></div></section>
+<section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05{{ filled($homeSections['posts']['label']) ? ' / '.$homeSections['posts']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['posts']['title']))<h2>{{ $homeSections['posts']['title'] }}</h2>@endif @if(filled($homeSections['posts']['description']))<p>{{ $homeSections['posts']['description'] }}</p>@endif</div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a></div><div class="posts-grid">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div></div></section>
 @endsection

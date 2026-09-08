@@ -25,6 +25,7 @@ use App\Models\ExportRun;
 use App\Models\Lead;
 use App\Models\MenuItem;
 use App\Models\MenuLocation;
+use App\Models\MethodologyStep;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\PostCategory;
@@ -859,6 +860,37 @@ class StudioFeatureTest extends TestCase
         $this->assertStringContainsString('Picker image', MediaPicker::optionHtml($created));
     }
 
+    public function test_media_picker_upload_action_adds_asset_to_grid_and_selects_it(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Queue::fake();
+
+        $slider = Slider::factory()->create(['name' => 'Upload target']);
+
+        $component = Livewire::actingAs($this->owner())
+            ->test(CreateSlideRecord::class)
+            ->fillForm(['slider_id' => $slider->id])
+            ->assertDontSee('صورة مرفوعة من المكتبة')
+            ->callAction(
+                TestAction::make('uploadMedia')->schemaComponent('desktop_media_id'),
+                [
+                    'upload_path' => UploadedFile::fake()->image('inline-upload.jpg', 480, 320),
+                    'name_ar' => 'صورة مرفوعة من المكتبة',
+                    'name_en' => 'Inline upload',
+                ],
+            )
+            ->assertHasNoActionErrors();
+
+        $created = Asset::query()->where('name->ar', 'صورة مرفوعة من المكتبة')->sole();
+
+        // The new asset shows in the library grid immediately, without a page refresh...
+        $component->assertSee('صورة مرفوعة من المكتبة')
+            ->assertSee('data-asset-id="'.$created->getKey().'"', false)
+            // ...and is pre-selected as the field value.
+            ->assertFormSet(['desktop_media_id' => $created->getKey()]);
+    }
+
     public function test_only_one_home_hero_renders_and_its_video_is_deferred(): void
     {
         $page = Page::factory()->create(['status' => 'published', 'template' => 'default']);
@@ -991,6 +1023,24 @@ class StudioFeatureTest extends TestCase
         Studio::put('home.intro_enabled', false, 'home');
         Studio::flush();
         $this->get('/en')->assertOk()->assertDontSee('id="home-intro"', false);
+    }
+
+    public function test_public_cta_arrows_use_svg_instead_of_an_emoji_prone_glyph(): void
+    {
+        MethodologyStep::query()->create([
+            'title' => ['ar' => 'نرسم الطريق', 'en' => 'Map the path'],
+            'icon' => '↗',
+            'number' => 1,
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        foreach (['/ar', '/ar/contact'] as $path) {
+            $this->get($path)
+                ->assertOk()
+                ->assertSee('class="arrow-up-right-icon"', false)
+                ->assertDontSee('↗', false);
+        }
     }
 
     public function test_footer_has_four_dynamic_columns_and_uses_dashboard_contact_settings(): void
