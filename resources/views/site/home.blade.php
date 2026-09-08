@@ -1,12 +1,41 @@
 @extends('layouts.site')
 @section('content')
 @include('site.partials.slider')
+@php
+    $homeSections = [
+        'services' => [
+            'label' => \App\Support\Studio::text('what_we_do'),
+            'title' => \App\Support\Studio::text('services_title'),
+            'description' => \App\Support\Studio::text('services_intro'),
+        ],
+        'projects' => [
+            'label' => \App\Support\Studio::text('selected_work'),
+            'title' => \App\Support\Studio::text('projects_title'),
+            'description' => \App\Support\Studio::text('projects_intro'),
+        ],
+        'process' => [
+            'label' => \App\Support\Studio::text('our_process'),
+            'title' => \App\Support\Studio::text('methodology_title'),
+            'description' => \App\Support\Studio::text('methodology_intro'),
+        ],
+        'testimonials' => [
+            'label' => \App\Support\Studio::text('client_words'),
+            'title' => \App\Support\Studio::text('testimonials_title'),
+            'description' => \App\Support\Studio::text('testimonials_intro'),
+        ],
+        'posts' => [
+            'label' => \App\Support\Studio::text('insights'),
+            'title' => \App\Support\Studio::text('posts_title'),
+            'description' => \App\Support\Studio::text('posts_intro'),
+        ],
+    ];
+@endphp
 <section class="section shell services-section">
     <header class="services-heading" data-reveal>
         <div class="services-heading-title">
-            <span class="services-kicker"><b>01</b><span>@t('what_we_do')</span></span>
-            <h3>@t('services_title')</h3>
-            <p>@t('services_intro')</p>
+            <span class="services-kicker"><b>01</b>@if(filled($homeSections['services']['label']))<span>{{ $homeSections['services']['label'] }}</span>@endif</span>
+            @if(filled($homeSections['services']['title']))<h3>{{ $homeSections['services']['title'] }}</h3>@endif
+            @if(filled($homeSections['services']['description']))<p>{{ $homeSections['services']['description'] }}</p>@endif
         </div>
         <a class="text-link" href="{{ route('services.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <span aria-hidden="true">↗</span></a>
     </header>
@@ -15,8 +44,11 @@
 <section class="section work-section">
     <div class="shell">
         <div class="section-heading">
-            <span class="eyebrow">02 / @t('selected_work')</span>
-            <div><h2>@t('projects_title')</h2></div>
+            <span class="eyebrow">02{{ filled($homeSections['projects']['label']) ? ' / '.$homeSections['projects']['label'] : '' }}</span>
+            <div class="section-heading-copy">
+                @if(filled($homeSections['projects']['title']))<h2>{{ $homeSections['projects']['title'] }}</h2>@endif
+                @if(filled($homeSections['projects']['description']))<p>{{ $homeSections['projects']['description'] }}</p>@endif
+            </div>
             <a class="text-link" href="{{ route('projects.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') ↗</a>
         </div>
         <div class="projects-grid">@foreach($projects as $project)<x-project-card :project="$project" />@endforeach</div>
@@ -72,7 +104,7 @@
     </div>
 </section>
 @endif
-<section class="section process-section"><div class="shell process-grid"><div><span class="eyebrow">03 / @t('our_process')</span><h2>@t('methodology_title')</h2><p>@t('methodology_intro')</p></div>@include('site.partials.process')</div></section>
-<section class="section shell"><div class="section-heading"><span class="eyebrow">04 / @t('client_words')</span><div><h2>@t('testimonials_title')</h2></div></div><div class="swiper reviews-swiper" data-studio-swiper data-swiper-kind="reviews" data-drag="1"><div class="swiper-wrapper">@foreach($testimonials as $review)<div class="swiper-slide"><x-testimonial :review="$review" /></div>@endforeach</div><div class="slider-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></div></section>
-<section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05 / @t('insights')</span><div><h2>@t('posts_title')</h2></div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') ↗</a></div><div class="posts-grid">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div></div></section>
+<section class="section process-section"><div class="shell process-grid"><div><span class="eyebrow">03{{ filled($homeSections['process']['label']) ? ' / '.$homeSections['process']['label'] : '' }}</span>@if(filled($homeSections['process']['title']))<h2>{{ $homeSections['process']['title'] }}</h2>@endif @if(filled($homeSections['process']['description']))<p>{{ $homeSections['process']['description'] }}</p>@endif</div>@include('site.partials.process')</div></section>
+<section class="section shell"><div class="section-heading"><span class="eyebrow">04{{ filled($homeSections['testimonials']['label']) ? ' / '.$homeSections['testimonials']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['testimonials']['title']))<h2>{{ $homeSections['testimonials']['title'] }}</h2>@endif @if(filled($homeSections['testimonials']['description']))<p>{{ $homeSections['testimonials']['description'] }}</p>@endif</div></div><div class="swiper reviews-swiper" data-studio-swiper data-swiper-kind="reviews" data-drag="1"><div class="swiper-wrapper">@foreach($testimonials as $review)<div class="swiper-slide"><x-testimonial :review="$review" /></div>@endforeach</div><div class="slider-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></div></section>
+<section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05{{ filled($homeSections['posts']['label']) ? ' / '.$homeSections['posts']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['posts']['title']))<h2>{{ $homeSections['posts']['title'] }}</h2>@endif @if(filled($homeSections['posts']['description']))<p>{{ $homeSections['posts']['description'] }}</p>@endif</div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') ↗</a></div><div class="posts-grid">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div></div></section>
 @endsection

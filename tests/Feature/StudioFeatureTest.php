@@ -36,6 +36,7 @@ use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Slider;
 use App\Models\Testimonial;
+use App\Models\Translation;
 use App\Models\User;
 use App\Support\FontRegistry;
 use App\Support\MediaPicker;
@@ -494,6 +495,69 @@ class StudioFeatureTest extends TestCase
             ->assertSee('<picture', false)
             ->assertDontSee('service-symbol')
             ->assertDontSee('service-card-index');
+    }
+
+    public function test_section_and_page_headings_are_managed_by_interface_translations(): void
+    {
+        $copy = [
+            'what_we_do' => 'نص خدمات الرئيسية',
+            'services_title' => 'عنوان الخدمات المشترك',
+            'services_intro' => 'وصف الخدمات المشترك',
+            'route_services.index' => 'نص صفحة الخدمات',
+            'selected_work' => 'نص أعمال الرئيسية',
+            'projects_title' => 'عنوان الأعمال المشترك',
+            'projects_intro' => 'وصف الأعمال المشترك',
+            'route_projects.index' => 'نص صفحة الأعمال',
+            'our_process' => 'نص المنهجية في الرئيسية',
+            'methodology_title' => 'عنوان المنهجية المشترك',
+            'methodology_intro' => 'وصف المنهجية المشترك',
+            'route_methodology' => 'نص صفحة المنهجية',
+            'client_words' => 'نص الآراء في الرئيسية',
+            'testimonials_title' => 'عنوان الآراء المشترك',
+            'testimonials_intro' => 'وصف الآراء المشترك',
+            'route_testimonials' => 'نص صفحة الآراء',
+            'insights' => 'نص المدونة في الرئيسية',
+            'posts_title' => 'عنوان المدونة المشترك',
+            'posts_intro' => 'وصف المدونة المشترك',
+            'route_posts.index' => 'نص صفحة المدونة',
+            'contact_title' => 'عنوان التواصل',
+            'contact_intro' => 'وصف التواصل',
+            'route_contact' => 'نص صفحة التواصل',
+        ];
+
+        foreach ($copy as $key => $value) {
+            Translation::updateOrCreate(
+                ['key' => $key],
+                ['value' => ['ar' => $value, 'en' => 'English '.$key], 'is_active' => true],
+            );
+        }
+        Studio::flush();
+
+        $this->get('/ar')->assertOk()
+            ->assertSee('نص خدمات الرئيسية')->assertSee('عنوان الخدمات المشترك')->assertSee('وصف الخدمات المشترك')
+            ->assertSee('نص أعمال الرئيسية')->assertSee('عنوان الأعمال المشترك')->assertSee('وصف الأعمال المشترك')
+            ->assertSee('نص المنهجية في الرئيسية')->assertSee('عنوان المنهجية المشترك')->assertSee('وصف المنهجية المشترك')
+            ->assertSee('نص الآراء في الرئيسية')->assertSee('عنوان الآراء المشترك')->assertSee('وصف الآراء المشترك')
+            ->assertSee('نص المدونة في الرئيسية')->assertSee('عنوان المدونة المشترك')->assertSee('وصف المدونة المشترك');
+
+        foreach ([
+            '/ar/services' => ['نص صفحة الخدمات', 'عنوان الخدمات المشترك', 'وصف الخدمات المشترك'],
+            '/ar/work' => ['نص صفحة الأعمال', 'عنوان الأعمال المشترك', 'وصف الأعمال المشترك'],
+            '/ar/journal' => ['نص صفحة المدونة', 'عنوان المدونة المشترك', 'وصف المدونة المشترك'],
+            '/ar/process' => ['نص صفحة المنهجية', 'عنوان المنهجية المشترك', 'وصف المنهجية المشترك'],
+            '/ar/testimonials' => ['نص صفحة الآراء', 'عنوان الآراء المشترك', 'وصف الآراء المشترك'],
+            '/ar/contact' => ['نص صفحة التواصل', 'عنوان التواصل', 'وصف التواصل'],
+        ] as $url => [$label, $title, $description]) {
+            $this->get($url)->assertOk()->assertSee($label)->assertSee($title)->assertSee($description);
+        }
+
+        $homeSettings = SettingsRegistry::groups()['home'];
+        $this->assertArrayNotHasKey('page_headers', SettingsRegistry::groups());
+        foreach (['services', 'projects', 'process', 'testimonials', 'posts'] as $section) {
+            $this->assertArrayNotHasKey($section.'_label', $homeSettings);
+            $this->assertArrayNotHasKey($section.'_title', $homeSettings);
+            $this->assertArrayNotHasKey($section.'_description', $homeSettings);
+        }
     }
 
     public function test_drafts_future_posts_and_unapproved_reviews_are_not_public(): void

@@ -62,7 +62,16 @@ class SiteController extends Controller
 
     private function archive(string $module, $category = null)
     {
-        return view('site.archive', ['module' => $module, 'category' => $category, 'seo' => Seo::make($category, Studio::text($module.'_title'), Studio::text($module.'_intro'))]);
+        $heading = $this->pageHeader('route_'.$module.'.index', $module.'_title', $module.'_intro');
+        $title = $category?->titleText() ?: $heading['title'];
+        $description = $category?->text('description') ?: $heading['description'];
+
+        return view('site.archive', [
+            'module' => $module,
+            'category' => $category,
+            'heading' => [...$heading, 'title' => $title, 'description' => $description],
+            'seo' => Seo::make($category, $title, $description),
+        ]);
     }
 
     public function services(string $locale)
@@ -141,17 +150,33 @@ class SiteController extends Controller
 
     public function methodology(string $locale)
     {
-        return view('site.methodology', ['seo' => Seo::make(title: Studio::text('methodology_title')), 'steps' => MethodologyStep::published()->orderBy('sort_order')->get()]);
+        $heading = $this->pageHeader('route_methodology', 'methodology_title', 'methodology_intro');
+
+        return view('site.methodology', ['heading' => $heading, 'seo' => Seo::make(title: $heading['title'], description: $heading['description']), 'steps' => MethodologyStep::published()->orderBy('sort_order')->get()]);
     }
 
     public function testimonials(string $locale)
     {
-        return view('site.testimonials', ['seo' => Seo::make(title: Studio::text('testimonials_title')), 'testimonials' => Testimonial::published()->where('is_demo', false)->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12)]);
+        $heading = $this->pageHeader('route_testimonials', 'testimonials_title', 'testimonials_intro');
+
+        return view('site.testimonials', ['heading' => $heading, 'seo' => Seo::make(title: $heading['title'], description: $heading['description']), 'testimonials' => Testimonial::published()->where('is_demo', false)->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12)]);
     }
 
     public function contact(string $locale)
     {
-        return view('site.contact', ['seo' => Seo::make(title: Studio::text('contact_title'))]);
+        $heading = $this->pageHeader('route_contact', 'contact_title', 'contact_intro');
+
+        return view('site.contact', ['heading' => $heading, 'seo' => Seo::make(title: $heading['title'], description: $heading['description'])]);
+    }
+
+    /** @return array{label: string, title: string, description: string} */
+    private function pageHeader(string $labelKey, string $titleKey, string $descriptionKey): array
+    {
+        return [
+            'label' => Studio::text($labelKey),
+            'title' => Studio::text($titleKey),
+            'description' => Studio::text($descriptionKey),
+        ];
     }
 
     public function page(string $locale, string $slug)

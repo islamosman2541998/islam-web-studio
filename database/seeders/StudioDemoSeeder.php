@@ -232,7 +232,15 @@ class StudioDemoSeeder extends Seeder
         for ($i = 1; $i <= 25; $i++) {
             Lead::firstOrCreate(['email' => 'demo-lead-'.$i.'@example.test'], ['name' => 'عميل تجريبي '.$i, 'phone' => '+20 000 000 0000', 'service_id' => array_values($services)[($i - 1) % count($services)]->id, 'message' => 'طلب تجريبي: نرغب في تطوير تجربة رقمية للمشروع، ونحتاج معرفة الخطوات والتسليمات المقترحة.', 'source' => ['form', 'manual', 'whatsapp'][$i % 3], 'status' => ['new', 'contacted', 'quoted', 'won', 'lost'][($i - 1) % 5], 'internal_notes' => 'بيانات للعرض والتجربة فقط. لا تتواصل مع هذا العنوان.', 'follow_up_at' => now()->addDays($i % 7), 'locale' => $i % 2 ? 'ar' : 'en', 'is_demo' => true, 'created_at' => now()->subDays($i), 'updated_at' => now()->subDays($i)]);
         }
-        foreach (['request_quote', 'contact_title', 'services_title', 'projects_title', 'posts_title', 'view_all', 'send', 'home', 'preview', 'export_excel'] as $key) {
+        foreach ([
+            'request_quote', 'view_all', 'send', 'home', 'preview', 'export_excel',
+            'what_we_do', 'services_title', 'services_intro', 'route_services.index',
+            'selected_work', 'projects_title', 'projects_intro', 'route_projects.index',
+            'our_process', 'methodology_title', 'methodology_intro', 'route_methodology',
+            'client_words', 'testimonials_title', 'testimonials_intro', 'route_testimonials',
+            'insights', 'posts_title', 'posts_intro', 'route_posts.index',
+            'contact_title', 'contact_intro', 'route_contact',
+        ] as $key) {
             Translation::firstOrCreate(['key' => $key], ['value' => $this->bi(trans('studio.'.$key, [], 'ar'), trans('studio.'.$key, [], 'en')), 'is_active' => true]);
         }
         Redirect::firstOrCreate(['from_path' => '/en/old-studio'], ['to_path' => '/en/about', 'is_active' => true]);
