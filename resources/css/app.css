@@ -216,30 +216,47 @@ html[lang='en'] .contact-page .eyebrow {
 
 .project-showcase {
     padding-bottom: 34px;
+    /* Cap the hero media so the whole gallery (media + thumbnails + controls) fits one screen */
+    --gallery-media-max: min(60dvh, 640px);
+}
+
+.project-intro {
+    padding-block: 44px 26px;
 }
 
 .project-gallery--hero .swiper-slide {
     min-width: 0;
-    background: color-mix(in srgb, var(--surface) 82%, var(--canvas));
+    background: transparent;
+    text-align: center;
 }
 
-.project-gallery--hero .swiper-slide > div > .media-picture,
-.project-gallery--hero .swiper-slide > div > video,
-.project-gallery--hero .swiper-slide > .media-picture,
-.project-gallery--hero .swiper-slide > video {
+/* Shrink-wrap the media to the image itself: no side letterbox, no blurred LQIP smear */
+.project-gallery--hero .gallery-frame {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: top;
+}
+
+.project-gallery--hero .gallery-frame .media-picture,
+.project-gallery--hero .gallery-frame video {
     display: block;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: auto;
-    max-height: none;
+    max-height: var(--gallery-media-max);
+    margin-inline: auto;
     aspect-ratio: auto;
+    background: none;
     object-fit: contain;
 }
 
-.project-gallery--hero .swiper-slide > div > .media-picture img,
-.project-gallery--hero .swiper-slide > .media-picture img {
+.project-gallery--hero .gallery-frame .media-picture img {
     display: block;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: auto;
+    max-height: var(--gallery-media-max);
     object-fit: contain;
 }
 

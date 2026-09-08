@@ -22,48 +22,52 @@
                 <div class="swiper-wrapper">
                     @if($record->mainMedia)
                         <figure class="swiper-slide project-gallery-main">
-                            <div @class(['desktop-project-media' => $record->mainMediaMobile])>
-                                <x-media
-                                    :asset="$record->mainMedia"
-                                    :poster="$record->mainMediaPoster"
-                                    :priority="true"
-                                    sizes="90vw"
-                                />
-                            </div>
-                            @if($record->mainMediaMobile)
-                                <div class="mobile-project-media">
+                            <div class="gallery-frame">
+                                <div @class(['desktop-project-media' => $record->mainMediaMobile])>
                                     <x-media
-                                        :asset="$record->mainMediaMobile"
+                                        :asset="$record->mainMedia"
                                         :poster="$record->mainMediaPoster"
                                         :priority="true"
-                                        sizes="100vw"
+                                        sizes="90vw"
                                     />
                                 </div>
-                            @endif
-                            @if($record->mainMedia->kind === 'image')
-                                <button
-                                    type="button"
-                                    class="preview-button"
-                                    data-gallery="{{ json_encode([['type' => 'image', 'src' => $record->mainMedia->imageUrl(1920), 'alt' => $record->titleText()]], JSON_UNESCAPED_UNICODE) }}"
-                                    aria-label="{{ \App\Support\Studio::text('preview') }}"
-                                >⤢</button>
-                            @endif
+                                @if($record->mainMediaMobile)
+                                    <div class="mobile-project-media">
+                                        <x-media
+                                            :asset="$record->mainMediaMobile"
+                                            :poster="$record->mainMediaPoster"
+                                            :priority="true"
+                                            sizes="100vw"
+                                        />
+                                    </div>
+                                @endif
+                                @if($record->mainMedia->kind === 'image')
+                                    <button
+                                        type="button"
+                                        class="preview-button"
+                                        data-gallery="{{ json_encode([['type' => 'image', 'src' => $record->mainMedia->imageUrl(1920), 'alt' => $record->titleText()]], JSON_UNESCAPED_UNICODE) }}"
+                                        aria-label="{{ \App\Support\Studio::text('preview') }}"
+                                    >⤢</button>
+                                @endif
+                            </div>
                         </figure>
                     @endif
 
                     @foreach($galleryItems as $entry)
                         <figure class="swiper-slide">
-                            <x-media :asset="$entry->media" sizes="90vw" />
+                            <div class="gallery-frame">
+                                <x-media :asset="$entry->media" sizes="90vw" />
+                                @if($entry->media?->kind === 'image')
+                                    <button
+                                        type="button"
+                                        class="preview-button"
+                                        data-gallery="{{ json_encode([['type' => 'image', 'src' => $entry->media->imageUrl(1920), 'alt' => $entry->text('caption')]], JSON_UNESCAPED_UNICODE) }}"
+                                        aria-label="{{ \App\Support\Studio::text('preview') }}"
+                                    >⤢</button>
+                                @endif
+                            </div>
                             @if($entry->text('caption'))
                                 <figcaption>{{ $entry->text('caption') }}</figcaption>
-                            @endif
-                            @if($entry->media?->kind === 'image')
-                                <button
-                                    type="button"
-                                    class="preview-button"
-                                    data-gallery="{{ json_encode([['type' => 'image', 'src' => $entry->media->imageUrl(1920), 'alt' => $entry->text('caption')]], JSON_UNESCAPED_UNICODE) }}"
-                                    aria-label="{{ \App\Support\Studio::text('preview') }}"
-                                >⤢</button>
                             @endif
                         </figure>
                     @endforeach
