@@ -66,6 +66,9 @@
                         <span class="iws-media-picker__selected-preview">
                             @if ($asset->kind === 'image' && filled($thumbnailUrl))
                                 <img src="{{ $thumbnailUrl }}" alt="" loading="lazy">
+                            @elseif ($asset->kind === 'video' && filled($thumbnailUrl))
+                                <video src="{{ $thumbnailUrl }}#t=0.1" muted playsinline preload="metadata" tabindex="-1"></video>
+                                <span class="iws-media-picker__selected-play" aria-hidden="true">▶</span>
                             @elseif ($asset->kind === 'video')
                                 <span aria-hidden="true">▶</span>
                             @else
