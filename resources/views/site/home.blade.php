@@ -61,9 +61,9 @@
     $introLinkRaw = str_replace('{locale}', app()->getLocale(), (string) \App\Support\Studio::setting('home.intro_link_url', '/{locale}/about'));
     $introLink = \App\Support\Studio::safeUrl($introLinkRaw);
     $introLinkNewTab = (bool) \App\Support\Studio::setting('home.intro_link_new_tab', false);
-    $introLinkText = \App\Support\Studio::translated('home.intro_link_text', \App\Support\Studio::text('route_about'));
-    $introFounderLabel = \App\Support\Studio::translated('home.intro_founder_label', \App\Support\Studio::text('founder'));
-    $introSignature = \App\Support\Studio::translated('home.intro_signature', 'Islam.');
+    $introLinkText = \App\Support\Studio::text('home_intro_link_text');
+    $introFounderLabel = \App\Support\Studio::text('home_intro_founder_label');
+    $introSignature = \App\Support\Studio::text('home_intro_signature');
 @endphp
 @if(\App\Support\Studio::setting('home.intro_enabled', true))
 <section id="home-intro" @class(['section', 'shell', 'about-intro', 'about-intro--without-media' => ! $introMediaEnabled])>
@@ -77,20 +77,20 @@
             @else
                 <img class="intro-default-mark" src="{{ asset('brand/mark.svg') }}" width="210" height="240" alt="">
             @endif
-            @if(filled(\App\Support\Studio::translated('home.intro_media_caption', "WE CONNECT\nTHE DOTS.")))
-                <span class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::translated('home.intro_media_caption', "WE CONNECT\nTHE DOTS.")) }}</span>
+            @if(filled(\App\Support\Studio::text('home_intro_media_caption')))
+                <span class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::text('home_intro_media_caption')) }}</span>
             @endif
         </div>
     @endif
     <div class="intro-copy">
-        @if(filled(\App\Support\Studio::translated('home.intro_label')))
-            <span class="eyebrow">{{ \App\Support\Studio::translated('home.intro_label') }}</span>
+        @if(filled(\App\Support\Studio::text('home_intro_label')))
+            <span class="eyebrow">{{ \App\Support\Studio::text('home_intro_label') }}</span>
         @endif
-        @if(filled(\App\Support\Studio::translated('home.intro_title')))
-            <h2 class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::translated('home.intro_title')) }}</h2>
+        @if(filled(\App\Support\Studio::text('home_intro_title')))
+            <h2 class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::text('home_intro_title')) }}</h2>
         @endif
-        @if(filled(\App\Support\Studio::translated('home.intro_text')))
-            <p class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::translated('home.intro_text')) }}</p>
+        @if(filled(\App\Support\Studio::text('home_intro_text')))
+            <p class="preserve-lines">{{ str_replace('\\n', "\n", \App\Support\Studio::text('home_intro_text')) }}</p>
         @endif
         @if(\App\Support\Studio::setting('home.intro_link_enabled', true) && filled($introLinkText) && $introLink !== '#')
                     <a class="text-link" href="{{ $introLink }}" @if(! $introLinkNewTab && str_starts_with($introLinkRaw, '/')) wire:navigate @endif @if($introLinkNewTab) target="_blank" rel="noopener noreferrer" @endif>{{ $introLinkText }} <x-arrow-up-right /></a>

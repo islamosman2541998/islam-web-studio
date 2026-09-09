@@ -62,7 +62,7 @@ class SiteController extends Controller
 
     private function archive(string $module, $category = null)
     {
-        $heading = $this->pageHeader('route_'.$module.'.index', $module.'_title', $module.'_intro');
+        $heading = $this->pageHeader('route_'.$module.'.index', $module.'_page_title', $module.'_page_intro');
         $title = $category?->titleText() ?: $heading['title'];
         $description = $category?->text('description') ?: $heading['description'];
 
@@ -150,14 +150,14 @@ class SiteController extends Controller
 
     public function methodology(string $locale)
     {
-        $heading = $this->pageHeader('route_methodology', 'methodology_title', 'methodology_intro');
+        $heading = $this->pageHeader('route_methodology', 'methodology_page_title', 'methodology_page_intro');
 
         return view('site.methodology', ['heading' => $heading, 'seo' => Seo::make(title: $heading['title'], description: $heading['description']), 'steps' => MethodologyStep::published()->orderBy('sort_order')->get()]);
     }
 
     public function testimonials(string $locale)
     {
-        $heading = $this->pageHeader('route_testimonials', 'testimonials_title', 'testimonials_intro');
+        $heading = $this->pageHeader('route_testimonials', 'testimonials_page_title', 'testimonials_page_intro');
 
         return view('site.testimonials', ['heading' => $heading, 'seo' => Seo::make(title: $heading['title'], description: $heading['description']), 'testimonials' => Testimonial::published()->where('is_demo', false)->orderByDesc('is_featured')->orderBy('sort_order')->paginate(12)]);
     }

@@ -101,17 +101,10 @@ class SettingsRegistry
                 'intro_media_fit' => ['media_fit', 'طريقة عرض الصورة', 'Image fit', 'cover'],
                 'intro_frame_enabled' => ['bool', 'إظهار الإطار الزخرفي فوق الصورة', 'Show decorative image frame', true],
                 'intro_media_background' => ['color', 'لون خلفية الصورة', 'Image background color', '#839958'],
-                'intro_media_caption' => ['translated', 'النص الصغير فوق الصورة', 'Text over the image', ['ar' => "WE CONNECT\nTHE DOTS.", 'en' => "WE CONNECT\nTHE DOTS."]],
                 'intro_media_caption_color' => ['color', 'لون النص فوق الصورة', 'Image caption color', '#0A3323'],
-                'intro_label' => ['translated', 'العنوان التمهيدي', 'Intro label', ['ar' => 'من أول فكرة، لآخر تفصيلة', 'en' => 'From first thought to final detail']],
-                'intro_title' => ['translated', 'عنوان لماذا نحن', 'Why us title', ['ar' => "شغل متكامل.\nبطابع يشبهك.", 'en' => "One studio.\nYour whole story."]],
-                'intro_text' => ['translated', 'وصف لماذا نحن', 'Why us text', ['ar' => 'نجمع التطوير والتصميم والتسويق في رحلة واحدة واضحة. نفهم مشروعك، نبني المناسب له، ونفضل معاك بعد الإطلاق.', 'en' => 'Development, design and marketing in one clear journey. We understand your business, build what fits, and stay with you after launch.']],
                 'intro_link_enabled' => ['bool', 'إظهار رابط القسم', 'Show section link', true],
-                'intro_link_text' => ['translated', 'نص رابط القسم', 'Section link text', ['ar' => 'من نحن', 'en' => 'About']],
                 'intro_link_url' => ['url', 'رابط القسم — يقبل {locale}', 'Section URL — accepts {locale}', '/{locale}/about'],
                 'intro_link_new_tab' => ['bool', 'فتح الرابط في نافذة جديدة', 'Open link in a new tab', false],
-                'intro_founder_label' => ['translated', 'وصف المؤسس', 'Founder label', ['ar' => 'إسلام — المؤسس والمطور الرئيسي', 'en' => 'Islam — Founder & technical lead']],
-                'intro_signature' => ['translated', 'التوقيع', 'Signature', ['ar' => 'Islam.', 'en' => 'Islam.']],
             ],
         ];
     }

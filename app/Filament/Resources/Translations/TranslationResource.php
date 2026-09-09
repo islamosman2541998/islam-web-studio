@@ -17,6 +17,10 @@ class TranslationResource extends StudioResource
 
     public static function getPages(): array
     {
-        return ['index' => Pages\ListRecords::route('/'), 'create' => Pages\CreateRecord::route('/create'), 'edit' => Pages\EditRecord::route('/{record}/edit')];
+        return [
+            'index' => Pages\ListRecords::route('/'),
+            'create' => Pages\CreateRecord::route('/create'),
+            'edit' => Pages\EditRecord::route('/{record}/edit'),
+        ];
     }
 }

@@ -49,7 +49,7 @@ class Studio
 
     public static function translations(): array
     {
-        return Cache::memo()->remember('studio.translations', 3600, fn () => Schema::hasTable('translations') ? Translation::where('is_active', true)->get()->mapWithKeys(fn (Translation $row) => [$row->key => $row->getTranslations('value')])->all() : []);
+        return Cache::memo()->remember('studio.translations', 3600, fn () => Schema::hasTable('translations') ? Translation::where('is_active', true)->get()->mapWithKeys(fn (Translation $row) => [$row->key => $row->storedValues()])->all() : []);
     }
 
     public static function text(string $key, array $replace = []): string

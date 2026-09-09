@@ -64,6 +64,11 @@ class MediaLibraryPicker extends ViewField
                 $asset = MediaPicker::createAsset($data, $this->mediaTypes);
 
                 $this->state($asset->getKey());
+                $this->getLivewire()->dispatch(
+                    'media-library-uploaded',
+                    pickerId: $this->getModalId(),
+                    assetId: (string) $asset->getKey(),
+                );
             })
             ->modalHeading(Studio::text('upload_new_media'))
             ->modalDescription(Studio::text('media_upload_modal_help'))

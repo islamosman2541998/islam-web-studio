@@ -13,6 +13,7 @@ use App\Filament\Resources\Services\Pages\EditRecord;
 use App\Filament\Resources\Services\Pages\ListRecords;
 use App\Filament\Resources\Services\ServiceResource;
 use App\Filament\Resources\Slides\Pages\CreateRecord as CreateSlideRecord;
+use App\Filament\Resources\Translations\Pages\ListRecords as ManageTranslations;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Widgets\ContentStatusChart;
 use App\Filament\Widgets\LeadActivityChart;
@@ -498,28 +499,38 @@ class StudioFeatureTest extends TestCase
             ->assertDontSee('service-card-index');
     }
 
-    public function test_section_and_page_headings_are_managed_by_interface_translations(): void
+    public function test_section_and_page_headings_are_managed_by_organized_translations(): void
     {
         $copy = [
             'what_we_do' => 'نص خدمات الرئيسية',
             'services_title' => 'عنوان الخدمات المشترك',
             'services_intro' => 'وصف الخدمات المشترك',
+            'services_page_title' => 'عنوان صفحة الخدمات',
+            'services_page_intro' => 'وصف صفحة الخدمات',
             'route_services.index' => 'نص صفحة الخدمات',
             'selected_work' => 'نص أعمال الرئيسية',
             'projects_title' => 'عنوان الأعمال المشترك',
             'projects_intro' => 'وصف الأعمال المشترك',
+            'projects_page_title' => 'عنوان صفحة الأعمال',
+            'projects_page_intro' => 'وصف صفحة الأعمال',
             'route_projects.index' => 'نص صفحة الأعمال',
             'our_process' => 'نص المنهجية في الرئيسية',
             'methodology_title' => 'عنوان المنهجية المشترك',
             'methodology_intro' => 'وصف المنهجية المشترك',
+            'methodology_page_title' => 'عنوان صفحة المنهجية',
+            'methodology_page_intro' => 'وصف صفحة المنهجية',
             'route_methodology' => 'نص صفحة المنهجية',
             'client_words' => 'نص الآراء في الرئيسية',
             'testimonials_title' => 'عنوان الآراء المشترك',
             'testimonials_intro' => 'وصف الآراء المشترك',
+            'testimonials_page_title' => 'عنوان صفحة الآراء',
+            'testimonials_page_intro' => 'وصف صفحة الآراء',
             'route_testimonials' => 'نص صفحة الآراء',
             'insights' => 'نص المدونة في الرئيسية',
             'posts_title' => 'عنوان المدونة المشترك',
             'posts_intro' => 'وصف المدونة المشترك',
+            'posts_page_title' => 'عنوان صفحة المدونة',
+            'posts_page_intro' => 'وصف صفحة المدونة',
             'route_posts.index' => 'نص صفحة المدونة',
             'contact_title' => 'عنوان التواصل',
             'contact_intro' => 'وصف التواصل',
@@ -542,11 +553,11 @@ class StudioFeatureTest extends TestCase
             ->assertSee('نص المدونة في الرئيسية')->assertSee('عنوان المدونة المشترك')->assertSee('وصف المدونة المشترك');
 
         foreach ([
-            '/ar/services' => ['نص صفحة الخدمات', 'عنوان الخدمات المشترك', 'وصف الخدمات المشترك'],
-            '/ar/work' => ['نص صفحة الأعمال', 'عنوان الأعمال المشترك', 'وصف الأعمال المشترك'],
-            '/ar/journal' => ['نص صفحة المدونة', 'عنوان المدونة المشترك', 'وصف المدونة المشترك'],
-            '/ar/process' => ['نص صفحة المنهجية', 'عنوان المنهجية المشترك', 'وصف المنهجية المشترك'],
-            '/ar/testimonials' => ['نص صفحة الآراء', 'عنوان الآراء المشترك', 'وصف الآراء المشترك'],
+            '/ar/services' => ['نص صفحة الخدمات', 'عنوان صفحة الخدمات', 'وصف صفحة الخدمات'],
+            '/ar/work' => ['نص صفحة الأعمال', 'عنوان صفحة الأعمال', 'وصف صفحة الأعمال'],
+            '/ar/journal' => ['نص صفحة المدونة', 'عنوان صفحة المدونة', 'وصف صفحة المدونة'],
+            '/ar/process' => ['نص صفحة المنهجية', 'عنوان صفحة المنهجية', 'وصف صفحة المنهجية'],
+            '/ar/testimonials' => ['نص صفحة الآراء', 'عنوان صفحة الآراء', 'وصف صفحة الآراء'],
             '/ar/contact' => ['نص صفحة التواصل', 'عنوان التواصل', 'وصف التواصل'],
         ] as $url => [$label, $title, $description]) {
             $this->get($url)->assertOk()->assertSee($label)->assertSee($title)->assertSee($description);
@@ -559,6 +570,45 @@ class StudioFeatureTest extends TestCase
             $this->assertArrayNotHasKey($section.'_title', $homeSettings);
             $this->assertArrayNotHasKey($section.'_description', $homeSettings);
         }
+
+        foreach (['intro_media_caption', 'intro_label', 'intro_title', 'intro_text', 'intro_link_text', 'intro_founder_label', 'intro_signature'] as $field) {
+            $this->assertArrayNotHasKey($field, $homeSettings);
+        }
+    }
+
+    public function test_translation_dashboard_groups_home_sections_and_inner_pages_and_saves_both_languages(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)
+            ->get('/admin/translations')
+            ->assertOk()
+            ->assertSee('الترجمات')
+            ->assertSee('الصفحة الرئيسية')
+            ->assertSee('الصفحات الداخلية والأخرى')
+            ->assertSee('سكشن الخدمات')
+            ->assertSee('صفحة الأعمال')
+            ->assertDontSee('ترجمات الواجهة');
+
+        Livewire::actingAs($owner)
+            ->test(ManageTranslations::class)
+            ->set('data.home.services.services_title.ar', 'عنوان خدمات منظم')
+            ->set('data.home.services.services_title.en', 'Organized services title')
+            ->set('data.inner.services.services_page_intro.ar', 'وصف مستقل لصفحة الخدمات')
+            ->set('data.inner.services.services_page_intro.en', 'Independent services page description')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('translations', ['key' => 'services_title', 'is_active' => true]);
+        $this->assertDatabaseHas('translations', ['key' => 'services_page_intro', 'is_active' => true]);
+
+        Studio::flush();
+        app()->setLocale('ar');
+        $this->assertSame('عنوان خدمات منظم', Studio::text('services_title'));
+        $this->assertSame('وصف مستقل لصفحة الخدمات', Studio::text('services_page_intro'));
+        app()->setLocale('en');
+        $this->assertSame('Organized services title', Studio::text('services_title'));
+        $this->assertSame('Independent services page description', Studio::text('services_page_intro'));
     }
 
     public function test_drafts_future_posts_and_unapproved_reviews_are_not_public(): void
@@ -880,7 +930,8 @@ class StudioFeatureTest extends TestCase
                     'name_en' => 'Inline upload',
                 ],
             )
-            ->assertHasNoActionErrors();
+            ->assertHasNoActionErrors()
+            ->assertDispatched('media-library-uploaded');
 
         $created = Asset::query()->where('name->ar', 'صورة مرفوعة من المكتبة')->sole();
 
@@ -957,7 +1008,7 @@ class StudioFeatureTest extends TestCase
         $this->assertSame(9, substr_count($response->getContent(), '<article class="project-card">'));
     }
 
-    public function test_home_intro_section_content_and_image_are_managed_by_settings(): void
+    public function test_home_intro_design_is_managed_by_settings_and_copy_by_translations(): void
     {
         $image = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
         $homeSettings = SettingsRegistry::groups()['home'];
@@ -968,8 +1019,8 @@ class StudioFeatureTest extends TestCase
             ->test(StudioSettings::class)
             ->assertFormFieldExists('home.intro_enabled')
             ->assertFormFieldExists('home.intro_media')
-            ->assertFormFieldExists('home.intro_title.ar')
-            ->assertFormFieldExists('home.intro_title.en')
+            ->assertFormFieldDoesNotExist('home.intro_title.ar')
+            ->assertFormFieldDoesNotExist('home.intro_title.en')
             ->assertFormFieldExists('home.intro_link_url');
 
         foreach ([
@@ -980,18 +1031,22 @@ class StudioFeatureTest extends TestCase
             'intro_frame_enabled' => false,
             'intro_media_background' => '#105666',
             'intro_media_caption_color' => '#F7F4D5',
-            'intro_media_caption' => ['ar' => 'نص الصورة المُدار', 'en' => 'Managed image caption'],
-            'intro_label' => ['ar' => 'عنوان تمهيدي مُدار', 'en' => 'Managed eyebrow'],
-            'intro_title' => ['ar' => 'عنوان مُدار', 'en' => 'Managed introduction title'],
-            'intro_text' => ['ar' => 'وصف مُدار', 'en' => 'Managed introduction copy'],
             'intro_link_enabled' => true,
-            'intro_link_text' => ['ar' => 'اعرف أكثر', 'en' => 'Learn more'],
             'intro_link_url' => 'https://example.com/about',
             'intro_link_new_tab' => true,
-            'intro_founder_label' => ['ar' => 'وصف المؤسس', 'en' => 'Managed founder label'],
-            'intro_signature' => ['ar' => 'توقيع', 'en' => 'Managed signature'],
         ] as $key => $value) {
             Studio::put('home.'.$key, $value, 'home');
+        }
+        foreach ([
+            'home_intro_media_caption' => ['ar' => 'نص الصورة المُدار', 'en' => 'Managed image caption'],
+            'home_intro_label' => ['ar' => 'عنوان تمهيدي مُدار', 'en' => 'Managed eyebrow'],
+            'home_intro_title' => ['ar' => 'عنوان مُدار', 'en' => 'Managed introduction title'],
+            'home_intro_text' => ['ar' => 'وصف مُدار', 'en' => 'Managed introduction copy'],
+            'home_intro_link_text' => ['ar' => 'اعرف أكثر', 'en' => 'Learn more'],
+            'home_intro_founder_label' => ['ar' => 'وصف المؤسس', 'en' => 'Managed founder label'],
+            'home_intro_signature' => ['ar' => 'توقيع', 'en' => 'Managed signature'],
+        ] as $key => $value) {
+            Translation::updateOrCreate(['key' => $key], ['value' => $value, 'is_active' => true]);
         }
         Studio::flush();
 
@@ -1010,8 +1065,11 @@ class StudioFeatureTest extends TestCase
             ->assertSee('Managed founder label')
             ->assertSee('Managed signature');
 
-        Studio::put('home.intro_media_caption', ['ar' => null, 'en' => null], 'home');
-        Studio::put('home.intro_founder_label', ['ar' => null, 'en' => null], 'home');
+        foreach (['home_intro_media_caption', 'home_intro_founder_label'] as $key) {
+            $translation = Translation::where('key', $key)->firstOrFail();
+            $translation->value = ['ar' => '', 'en' => ''];
+            $translation->save();
+        }
         Studio::flush();
         $this->get('/en')
             ->assertOk()

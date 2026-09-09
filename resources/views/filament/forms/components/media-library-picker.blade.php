@@ -9,7 +9,7 @@
     <div
         class="iws-media-picker"
         x-data="{
-            state: $wire.$entangle(@js($getStatePath()), true),
+            state: $wire.$entangle(@js($getStatePath())),
             search: '',
             previewId: '',
             init() {
@@ -45,15 +45,32 @@
                 this.previewId = String(this.state || this.firstAssetId())
                 this.$dispatch('open-modal', { id: @js($modalId) })
             },
-            selectAsset(id) {
-                this.state = Number(id)
+            async selectAsset(id) {
+                const value = Number(id)
+
+                this.state = value
                 this.previewId = String(id)
+                await this.$wire.set(@js($getStatePath()), value, true)
                 this.$dispatch('close-modal', { id: @js($modalId) })
             },
-            clearSelection() {
+            async clearSelection() {
                 this.state = null
+                await this.$wire.set(@js($getStatePath()), null, true)
+            },
+            handleUpload(event) {
+                if (event.detail?.pickerId !== @js($modalId)) {
+                    return
+                }
+
+                this.state = Number(event.detail.assetId)
+                this.previewId = String(event.detail.assetId)
+                this.search = ''
+                this.$nextTick(() => setTimeout(() => {
+                    this.$dispatch('open-modal', { id: @js($modalId) })
+                }, 75))
             },
         }"
+        x-on:media-library-uploaded.window="handleUpload($event)"
     >
         <div class="iws-media-picker__control">
             <div class="iws-media-picker__current">
@@ -136,7 +153,9 @@
                         >
                     </label>
 
-                    {{ $field->getAction('uploadMedia') }}
+                    <div x-on:click.capture="$dispatch('close-modal', { id: @js($modalId) })">
+                        {{ $field->getAction('uploadMedia') }}
+                    </div>
                 </div>
 
                 @if ($assets->isEmpty())
