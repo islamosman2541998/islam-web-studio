@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Jobs\GenerateAssetConversions;
 use App\Models\Asset;
+use App\Rules\MediaUploadSize;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -45,6 +46,11 @@ class MediaPicker
         if (! in_array($kind, self::normalizeTypes($types), true)) {
             Storage::disk('local')->delete($path);
             throw ValidationException::withMessages(['upload_path' => Studio::text('media_type_not_allowed')]);
+        }
+
+        if (MediaUploadLimits::exceedsLimit($mime, (int) Storage::disk('local')->size($path))) {
+            Storage::disk('local')->delete($path);
+            throw ValidationException::withMessages(['upload_path' => MediaUploadLimits::messageForMime($mime)]);
         }
 
         $nameAr = trim((string) ($data['name_ar'] ?? ''));
@@ -104,16 +110,7 @@ class MediaPicker
     public static function uploadForm(array $types): array
     {
         return [
-            FileUpload::make('upload_path')
-                ->label(Studio::text('media_file'))
-                ->disk('local')
-                ->directory('incoming')
-                ->visibility('private')
-                ->acceptedFileTypes(self::acceptedMimeTypes($types))
-                ->maxSize(51200)
-                ->previewable()
-                ->openable(false)
-                ->downloadable(false)
+            self::uploadField('upload_path', $types)
                 ->required()
                 ->columnSpanFull(),
             TextInput::make('name_ar')->label(Studio::text('media_name_ar'))->required()->maxLength(255),
@@ -121,6 +118,28 @@ class MediaPicker
             Textarea::make('alt_ar')->label(Studio::text('media_alt_ar'))->rows(2)->maxLength(500),
             Textarea::make('alt_en')->label(Studio::text('media_alt_en'))->rows(2)->maxLength(500),
         ];
+    }
+
+    /** @param array<int, string>|string $types */
+    public static function uploadField(string $name, array|string $types = ['image', 'video', 'file']): FileUpload
+    {
+        $types = self::normalizeTypes($types);
+
+        return FileUpload::make($name)
+            ->label(Studio::text('media_file'))
+            ->helperText(Studio::text('media_size_help'))
+            ->disk('local')
+            ->directory('incoming')
+            ->visibility('private')
+            ->acceptedFileTypes(self::acceptedMimeTypes($types))
+            ->rule(new MediaUploadSize)
+            ->maxSize(MediaUploadLimits::UPLOAD_MAX_KILOBYTES)
+            ->validationMessages([
+                'uploaded' => Studio::text('media_upload_failed_size'),
+            ])
+            ->previewable()
+            ->openable(false)
+            ->downloadable(false);
     }
 
     /** @param array<int, string> $types */

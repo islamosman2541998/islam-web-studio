@@ -40,9 +40,11 @@ use App\Models\Slider;
 use App\Models\Testimonial;
 use App\Models\Translation;
 use App\Models\User;
+use App\Rules\MediaUploadSize;
 use App\Support\FontRegistry;
 use App\Support\MediaPicker;
 use App\Support\MediaPipeline;
+use App\Support\MediaUploadLimits;
 use App\Support\MenuResolver;
 use App\Support\ModuleRegistry;
 use App\Support\Preloader;
@@ -55,6 +57,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Livewire;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Spatie\Permission\Models\Permission;
@@ -940,6 +943,45 @@ class StudioFeatureTest extends TestCase
             ->assertSee('data-asset-id="'.$created->getKey().'"', false)
             // ...and is pre-selected as the field value.
             ->assertFormSet(['desktop_media_id' => $created->getKey()]);
+    }
+
+    public function test_media_uploads_have_separate_image_and_video_size_limits_with_clear_errors(): void
+    {
+        app()->setLocale('ar');
+
+        $upload = MediaPicker::uploadField('upload_path');
+
+        $this->assertSame(60 * 1024, $upload->getMaxSize());
+        $this->assertSame(5 * 1024, MediaUploadLimits::maxKilobytesForMime('image/jpeg'));
+        $this->assertSame(60 * 1024, MediaUploadLimits::maxKilobytesForMime('video/mp4'));
+        $this->assertFalse(MediaUploadLimits::exceedsLimit('video/mp4', 60 * 1024 * 1024));
+        $this->assertTrue(MediaUploadLimits::exceedsLimit('video/mp4', (60 * 1024 * 1024) + 1));
+
+        $oversizedImage = UploadedFile::fake()
+            ->image('oversized.jpg', 32, 32)
+            ->size((5 * 1024) + 1);
+        $validator = Validator::make(
+            ['upload_path' => $oversizedImage],
+            ['upload_path' => ['file', new MediaUploadSize]],
+        );
+
+        $this->assertTrue($validator->fails());
+        $this->assertSame(Studio::text('media_image_too_large'), $validator->errors()->first('upload_path'));
+
+        $allowedVideo = UploadedFile::fake()->create('allowed.mp4', 60 * 1024, 'video/mp4');
+        $oversizedVideo = UploadedFile::fake()->create('oversized.mp4', (60 * 1024) + 1, 'video/mp4');
+        $allowedVideoValidator = Validator::make(
+            ['upload_path' => $allowedVideo],
+            ['upload_path' => ['file', new MediaUploadSize]],
+        );
+        $oversizedVideoValidator = Validator::make(
+            ['upload_path' => $oversizedVideo],
+            ['upload_path' => ['file', new MediaUploadSize]],
+        );
+
+        $this->assertFalse($allowedVideoValidator->fails());
+        $this->assertTrue($oversizedVideoValidator->fails());
+        $this->assertSame(Studio::text('media_video_too_large'), $oversizedVideoValidator->errors()->first('upload_path'));
     }
 
     public function test_only_one_home_hero_renders_and_its_video_is_deferred(): void

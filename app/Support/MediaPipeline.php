@@ -32,11 +32,15 @@ class MediaPipeline
         $file = Storage::disk('local')->path($source);
         $mime = (string) mime_content_type($file);
         $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf', 'application/zip', 'application/x-zip-compressed'];
-        if (! in_array($mime, $allowed, true) || filesize($file) > 52_428_800) {
+        if (! in_array($mime, $allowed, true)) {
             throw new \RuntimeException('Unsupported media type or file size.');
         }
 
         $kind = str_starts_with($mime, 'image/') ? 'image' : (str_starts_with($mime, 'video/') ? 'video' : 'file');
+        if (MediaUploadLimits::exceedsLimit($mime, (int) filesize($file))) {
+            throw new \RuntimeException('The uploaded media exceeds its allowed size.');
+        }
+
         $dimensions = null;
         if ($kind === 'image') {
             $dimensions = getimagesize($file);

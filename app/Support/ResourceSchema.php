@@ -4,7 +4,6 @@ namespace App\Support;
 
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -78,7 +77,7 @@ class ResourceSchema
             'media' => MediaPicker::make($path, $d['types'] ?? 'image,video,file'),
             'datetime' => DateTimePicker::make($path)->seconds(false)->timezone('Africa/Cairo'),
             'color' => ColorPicker::make($path)->hex(),
-            'upload' => FileUpload::make($path)->disk('local')->directory('incoming')->visibility('private')->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'video/mp4', 'video/webm', 'application/pdf', 'application/zip'])->maxSize(51200)->downloadable(false),
+            'upload' => MediaPicker::uploadField($path),
             'tags' => TagsInput::make($path),
             'route' => Select::make($path)->options(fn () => MenuResolver::routeOptions())->searchable(),
             'dynamic_items' => Select::make($path)->multiple()->searchable()->options(fn (Get $get) => ($source = $get('dynamic_source')) && isset(ModuleRegistry::all()[$source]) ? ModuleRegistry::options(ModuleRegistry::get($source)['model'], true) : []),
