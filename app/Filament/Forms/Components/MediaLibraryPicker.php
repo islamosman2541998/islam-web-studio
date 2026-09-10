@@ -7,8 +7,10 @@ use App\Support\MediaPicker;
 use App\Support\Studio;
 use Filament\Actions\Action;
 use Filament\Forms\Components\ViewField;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class MediaLibraryPicker extends ViewField
 {
@@ -61,7 +63,18 @@ class MediaLibraryPicker extends ViewField
             ->outlined()
             ->schema(MediaPicker::uploadForm($this->mediaTypes))
             ->action(function (array $data): void {
-                $asset = MediaPicker::createAsset($data, $this->mediaTypes);
+                try {
+                    $asset = MediaPicker::createAsset($data, $this->mediaTypes);
+                } catch (ValidationException $exception) {
+                    Notification::make()
+                        ->title(Studio::text('media_upload_failed_title'))
+                        ->body(collect($exception->errors())->flatten()->filter()->first() ?: Studio::text('media_processing_failed'))
+                        ->danger()
+                        ->persistent()
+                        ->send();
+
+                    throw $exception;
+                }
 
                 $this->state($asset->getKey());
                 $this->getLivewire()->dispatch(

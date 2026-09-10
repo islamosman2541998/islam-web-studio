@@ -379,6 +379,63 @@ class StudioFeatureTest extends TestCase
         $this->assertSame(2, substr_count($response->getContent(), 'data-slide-to="'));
     }
 
+    public function test_project_videos_use_the_branded_player_on_home_archive_and_detail_pages(): void
+    {
+        $poster = Asset::factory()->create([
+            'kind' => 'image',
+            'metadata' => ['mime' => 'image/jpeg'],
+        ]);
+        $mainVideo = Asset::factory()->create([
+            'kind' => 'video',
+            'metadata' => ['mime' => 'video/quicktime'],
+        ]);
+        $galleryVideo = Asset::factory()->create([
+            'kind' => 'video',
+            'metadata' => ['mime' => 'video/mp4'],
+        ]);
+        $project = Project::factory()->create([
+            'title' => ['ar' => 'مشروع فيديو', 'en' => 'Video project'],
+            'status' => 'published',
+            'main_media_type' => 'video',
+            'main_media_id' => $mainVideo->id,
+            'main_media_poster_id' => $poster->id,
+        ]);
+
+        ProjectMedia::create([
+            'project_id' => $project->id,
+            'media_id' => $galleryVideo->id,
+            'type' => 'video',
+            'caption' => ['ar' => 'فيديو إضافي', 'en' => 'Additional video'],
+            'sort_order' => 0,
+        ]);
+
+        foreach (['/ar', '/ar/work'] as $url) {
+            $response = $this->get($url)
+                ->assertOk()
+                ->assertSee('studio-video--card', false)
+                ->assertSee('project-cover--video', false)
+                ->assertSee('project-cover-detail', false)
+                ->assertSee('data-video-progress', false)
+                ->assertSee('data-mime="video/quicktime"', false)
+                ->assertDontSee('data-card-preview', false)
+                ->assertDontSee('video-badge', false)
+                ->assertDontSee('studio-video__media" controls', false);
+
+            $this->assertSame(1, substr_count($response->getContent(), 'studio-video--card'));
+        }
+
+        $detail = $this->get('/ar/work/'.$project->text('slug', 'ar'))
+            ->assertOk()
+            ->assertSee('studio-video--gallery', false)
+            ->assertSee('data-video-progress', false)
+            ->assertSee('data-video-fullscreen', false)
+            ->assertSee('data-mime="video/quicktime"', false)
+            ->assertSee('type="video/mp4"', false)
+            ->assertDontSee('studio-video__media" controls', false);
+
+        $this->assertSame(2, substr_count($detail->getContent(), 'studio-video--gallery'));
+    }
+
     public function test_public_archive_filters_refresh_results_and_page_labels_follow_the_locale(): void
     {
         $development = ServiceCategory::factory()->create([
@@ -982,6 +1039,37 @@ class StudioFeatureTest extends TestCase
         $this->assertFalse($allowedVideoValidator->fails());
         $this->assertTrue($oversizedVideoValidator->fails());
         $this->assertSame(Studio::text('media_video_too_large'), $oversizedVideoValidator->errors()->first('upload_path'));
+    }
+
+    public function test_media_pipeline_accepts_a_nineteen_megabyte_mov_video(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Queue::fake();
+
+        $path = 'incoming/test-video.mov';
+        Storage::disk('local')->makeDirectory('incoming');
+        $absolutePath = Storage::disk('local')->path($path);
+        $handle = fopen($absolutePath, 'wb');
+        fwrite($handle, pack('N', 20).'ftyp'.'qt  '.pack('N', 0).'qt  ');
+        ftruncate($handle, 19 * 1024 * 1024);
+        fclose($handle);
+
+        $this->assertSame('video/quicktime', mime_content_type($absolutePath));
+        $this->assertSame(60 * 1024 * 1024, config('media-library.max_file_size'));
+
+        $asset = MediaPicker::createAsset([
+            'upload_path' => $path,
+            'name_ar' => 'فيديو MOV',
+            'name_en' => 'MOV video',
+        ], ['video']);
+
+        $this->assertSame('video', $asset->kind);
+        $this->assertNull($asset->upload_path);
+        $this->assertSame('video/quicktime', $asset->metadata['mime']);
+        $this->assertSame(19 * 1024 * 1024, $asset->metadata['bytes']);
+        $this->assertNotNull($asset->original());
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_only_one_home_hero_renders_and_its_video_is_deferred(): void

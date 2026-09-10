@@ -389,6 +389,7 @@ return [
     'media_video_too_large' => 'The video is too large. Videos may be up to 60 MB.',
     'media_file_too_large' => 'The file is too large. Other files may be up to 50 MB.',
     'media_upload_failed_size' => 'The upload failed. Make sure images are under 5 MB and videos are under 60 MB.',
+    'media_upload_failed_title' => 'Media could not be added',
     'media_upload_queued' => 'Added to the library and queued for processing',
     'media_upload_ready' => 'Added to the library and ready to select',
     'media_processing_failed' => 'The file could not be prepared. Check its type, size, and dimensions, then try again.',

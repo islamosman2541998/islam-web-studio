@@ -78,7 +78,6 @@ class MediaPicker
             }
         } catch (Throwable $error) {
             report($error);
-            Storage::disk('local')->delete($path);
             Asset::withoutEvents(fn () => $asset->forceDelete());
 
             throw ValidationException::withMessages(['upload_path' => Studio::text('media_processing_failed')]);

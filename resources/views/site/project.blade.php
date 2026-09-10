@@ -24,23 +24,45 @@
                         <figure class="swiper-slide project-gallery-main">
                             <div class="gallery-frame">
                                 <div @class(['desktop-project-media' => $record->mainMediaMobile])>
-                                    <x-media
-                                        :asset="$record->mainMedia"
-                                        :poster="$record->mainMediaPoster"
-                                        :priority="true"
-                                        sizes="90vw"
-                                    />
-                                </div>
-                                @if($record->mainMediaMobile)
-                                    <div class="mobile-project-media">
-                                        <x-media
-                                            :asset="$record->mainMediaMobile"
+                                    @if($record->mainMedia->kind === 'video')
+                                        <x-studio-video
+                                            :asset="$record->mainMedia"
                                             :poster="$record->mainMediaPoster"
                                             :priority="true"
-                                            sizes="100vw"
+                                            :title="$record->titleText()"
+                                            variant="gallery"
                                         />
+                                    @else
+                                        <x-media
+                                            :asset="$record->mainMedia"
+                                            :poster="$record->mainMediaPoster"
+                                            :priority="true"
+                                            sizes="90vw"
+                                        />
+                                    @endif
+                                </div>
+
+                                @if($record->mainMediaMobile)
+                                    <div class="mobile-project-media">
+                                        @if($record->mainMediaMobile->kind === 'video')
+                                            <x-studio-video
+                                                :asset="$record->mainMediaMobile"
+                                                :poster="$record->mainMediaPoster"
+                                                :priority="true"
+                                                :title="$record->titleText()"
+                                                variant="gallery"
+                                            />
+                                        @else
+                                            <x-media
+                                                :asset="$record->mainMediaMobile"
+                                                :poster="$record->mainMediaPoster"
+                                                :priority="true"
+                                                sizes="100vw"
+                                            />
+                                        @endif
                                     </div>
                                 @endif
+
                                 @if($record->mainMedia->kind === 'image')
                                     <button
                                         type="button"
@@ -56,7 +78,16 @@
                     @foreach($galleryItems as $entry)
                         <figure class="swiper-slide">
                             <div class="gallery-frame">
-                                <x-media :asset="$entry->media" sizes="90vw" />
+                                @if($entry->media?->kind === 'video')
+                                    <x-studio-video
+                                        :asset="$entry->media"
+                                        :title="$entry->text('caption') ?: $record->titleText()"
+                                        variant="gallery"
+                                    />
+                                @else
+                                    <x-media :asset="$entry->media" sizes="90vw" />
+                                @endif
+
                                 @if($entry->media?->kind === 'image')
                                     <button
                                         type="button"
@@ -66,6 +97,7 @@
                                     >⤢</button>
                                 @endif
                             </div>
+
                             @if($entry->text('caption'))
                                 <figcaption>{{ $entry->text('caption') }}</figcaption>
                             @endif
@@ -84,6 +116,7 @@
                                 @endif
                             </button>
                         @endif
+
                         @foreach($galleryItems as $entry)
                             @php($slideIndex = $loop->index + ($record->mainMedia ? 1 : 0))
                             <button type="button" data-slide-to="{{ $slideIndex }}" aria-label="{{ \App\Support\Studio::text('preview') }} {{ $slideIndex + 1 }}">
@@ -95,6 +128,7 @@
                             </button>
                         @endforeach
                     </div>
+
                     <div class="slider-controls">
                         <button type="button" class="swiper-prev" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button>
                         <button type="button" class="swiper-next" aria-label="{{ \App\Support\Studio::text('next') }}">→</button>
