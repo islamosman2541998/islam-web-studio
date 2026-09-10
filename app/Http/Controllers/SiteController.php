@@ -52,7 +52,7 @@ class SiteController extends Controller
             'seo' => Seo::make($record),
             'slider' => Slider::activeHomeHero()->with(['slides' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order'), 'slides.desktopMedia', 'slides.mobileMedia', 'slides.desktopPoster', 'slides.mobilePoster'])->first(),
             'services' => Service::published()->with('imageMedia', 'serviceCategory')->orderByDesc('is_featured')->orderBy('sort_order')->limit(6)->get(),
-            'projects' => Project::published()->with('mainMedia', 'mainMediaPoster', 'projectCategory', 'metrics', 'gallery.media')->orderByDesc('is_featured')->orderBy('sort_order')->limit(9)->get(),
+            'projects' => Project::published()->with('mainMedia', 'mainMediaPoster', 'projectCategory', 'metrics', 'gallery.media')->inRandomOrder()->limit(9)->get(),
             'introMedia' => $introMedia,
             'steps' => MethodologyStep::published()->orderBy('sort_order')->get(),
             'testimonials' => Testimonial::published()->where('is_demo', false)->orderByDesc('is_featured')->orderBy('sort_order')->limit(6)->get(),

@@ -175,6 +175,8 @@ class TranslationRegistry
                             'all' => self::field('الكل', 'All'),
                             'search' => self::field('البحث', 'Search'),
                             'no_records' => self::field('لا توجد نتائج', 'No records'),
+                            'load_more' => self::field('زر تحميل المزيد', 'Load more button'),
+                            'loading_more' => self::field('نص تحميل المزيد', 'Loading more text'),
                             'preview' => self::field('المعاينة', 'Preview'),
                             'previous' => self::field('السابق', 'Previous'),
                             'next' => self::field('التالي', 'Next'),

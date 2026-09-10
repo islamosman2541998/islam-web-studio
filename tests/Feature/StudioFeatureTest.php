@@ -1126,16 +1126,50 @@ class StudioFeatureTest extends TestCase
             ->assertDontSee('Digital solutions · Cairo');
     }
 
-    public function test_home_displays_at_most_nine_projects_with_the_original_card_layout(): void
+    public function test_home_displays_nine_random_projects_with_the_original_card_layout(): void
     {
-        Project::factory()->count(10)->create(['status' => 'published']);
+        Project::factory()->count(18)->create(['status' => 'published']);
 
-        $response = $this->get('/ar')
+        $firstResponse = $this->get('/ar')
             ->assertOk()
             ->assertSee('class="projects-grid"', false)
             ->assertDontSee('projects-grid--showcase');
+        $secondResponse = $this->get('/ar')->assertOk();
 
-        $this->assertSame(9, substr_count($response->getContent(), '<article class="project-card">'));
+        preg_match_all('/data-project-id="(\d+)"/', $firstResponse->getContent(), $firstMatches);
+        preg_match_all('/data-project-id="(\d+)"/', $secondResponse->getContent(), $secondMatches);
+
+        $this->assertCount(9, $firstMatches[1]);
+        $this->assertCount(9, $secondMatches[1]);
+        $this->assertNotSame($firstMatches[1], $secondMatches[1]);
+    }
+
+    public function test_projects_archive_loads_random_projects_in_stable_batches_without_pagination(): void
+    {
+        Project::factory()->count(20)->create(['status' => 'published']);
+
+        $component = Livewire::test(BrowseContent::class, ['module' => 'projects']);
+
+        preg_match_all('/data-project-id="(\d+)"/', $component->html(), $firstMatches);
+
+        $this->assertCount(9, $firstMatches[1]);
+        $component
+            ->assertSee('wire:intersect.margin.400px="loadMore"', false)
+            ->assertDontSee('class="pagination"', false)
+            ->call('loadMore');
+
+        preg_match_all('/data-project-id="(\d+)"/', $component->html(), $secondMatches);
+
+        $this->assertCount(18, $secondMatches[1]);
+        $this->assertSame($firstMatches[1], array_slice($secondMatches[1], 0, 9));
+        $this->assertCount(18, array_unique($secondMatches[1]));
+
+        $component->call('loadMore');
+        preg_match_all('/data-project-id="(\d+)"/', $component->html(), $finalMatches);
+
+        $this->assertCount(20, $finalMatches[1]);
+        $this->assertCount(20, array_unique($finalMatches[1]));
+        $component->assertDontSee('wire:intersect.margin.400px="loadMore"', false);
     }
 
     public function test_home_intro_design_is_managed_by_settings_and_copy_by_translations(): void

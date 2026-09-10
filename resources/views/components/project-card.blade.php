@@ -17,7 +17,7 @@
     $cover = $isVideo ? $project->mainMediaPoster : $project->mainMedia;
 @endphp
 
-<article {{ $attributes->class('project-card') }}>
+<article {{ $attributes->class('project-card')->merge(['data-project-id' => $project->id]) }}>
     <div @class(['project-cover', 'project-cover--video' => $isVideo])>
         @if($isVideo)
             <x-studio-video

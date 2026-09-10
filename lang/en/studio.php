@@ -59,6 +59,8 @@ return [
     'export_queued' => 'Export queued',
     'export_help' => 'Find your file under Exports. Downloads are private to your account and expire after 7 days.',
     'no_records' => 'No results found',
+    'load_more' => 'Load more',
+    'loading_more' => 'Loading more…',
     'yes' => 'Yes',
     'no' => 'No',
     'saved' => 'Saved successfully',
