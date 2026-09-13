@@ -72,7 +72,7 @@ class ResourceSchema
             'textarea' => Textarea::make($path)->rows(4)->maxLength(20000),
             'rich' => RichEditor::make($path)->toolbarButtons(['bold', 'italic', 'underline', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])->columnSpanFull(),
             'boolean' => Toggle::make($path),
-            'select' => Select::make($path)->options(collect($d['options'])->mapWithKeys(fn ($v) => [$v => Studio::text($v)])->all())->live(),
+            'select' => Select::make($path)->options(collect($d['options'])->mapWithKeys(fn ($v) => [$v => Studio::text($v)])->all()),
             'relation' => Select::make($path)->options(fn () => ModuleRegistry::options($d['model']))->searchable()->preload(),
             'media' => MediaPicker::make($path, $d['types'] ?? 'image,video,file'),
             'datetime' => DateTimePicker::make($path)->seconds(false)->timezone('Africa/Cairo'),
@@ -130,6 +130,10 @@ class ResourceSchema
             $field->required(fn (string $operation) => $operation === 'create');
         }
         if ($module === 'menu_items') {
+            if (in_array($name, ['type', 'dynamic_source', 'dynamic_mode'], true)) {
+                $field->live();
+            }
+
             $visible = match ($name) {
                 'route_name' => ['route'],'url' => ['external'],'page_id' => ['page'],'dynamic_source','dynamic_mode','dynamic_items','dynamic_category_id','dynamic_featured','dynamic_limit' => ['dynamic_group'],default => null
             };

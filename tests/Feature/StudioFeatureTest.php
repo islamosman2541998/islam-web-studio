@@ -7,6 +7,7 @@ use App\Filament\Pages\MenuBuilder;
 use App\Filament\Pages\StudioSettings;
 use App\Filament\Resources\Assets\AssetResource;
 use App\Filament\Resources\Posts\PostResource;
+use App\Filament\Resources\Projects\Pages\EditRecord as EditProjectRecord;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Services\Pages\CreateRecord;
 use App\Filament\Resources\Services\Pages\EditRecord;
@@ -968,6 +969,16 @@ class StudioFeatureTest extends TestCase
         Storage::disk('local')->assertMissing($path);
         app()->setLocale('en');
         $this->assertStringContainsString('Picker image', MediaPicker::optionHtml($created));
+    }
+
+    public function test_regular_selects_do_not_rerender_media_heavy_forms(): void
+    {
+        $project = Project::factory()->create();
+        $page = Livewire::actingAs($this->owner())
+            ->test(EditProjectRecord::class, ['record' => $project->getKey()]);
+
+        $this->assertFalse($page->instance()->form->getComponent('main_media_type')->isLive());
+        $this->assertFalse($page->instance()->form->getComponent('status')->isLive());
     }
 
     public function test_media_picker_upload_action_adds_asset_to_grid_and_selects_it(): void

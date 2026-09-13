@@ -9,7 +9,7 @@
     <div
         class="iws-media-picker"
         x-data="{
-            state: $wire.$entangle(@js($getStatePath())),
+            state: $wire.{!! $field->applyStateBindingModifiers("\$entangle('{$getStatePath()}')") !!},
             search: '',
             previewId: '',
             init() {
@@ -45,17 +45,15 @@
                 this.previewId = String(this.state || this.firstAssetId())
                 this.$dispatch('open-modal', { id: @js($modalId) })
             },
-            async selectAsset(id) {
+            selectAsset(id) {
                 const value = Number(id)
 
                 this.state = value
                 this.previewId = String(id)
-                await this.$wire.set(@js($getStatePath()), value, true)
                 this.$dispatch('close-modal', { id: @js($modalId) })
             },
-            async clearSelection() {
+            clearSelection() {
                 this.state = null
-                await this.$wire.set(@js($getStatePath()), null, true)
             },
             handleUpload(event) {
                 if (event.detail?.pickerId !== @js($modalId)) {

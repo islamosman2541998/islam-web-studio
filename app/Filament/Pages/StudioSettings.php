@@ -78,8 +78,9 @@ class StudioSettings extends Page
                     $arabic = Textarea::make($name.'.ar')->label($ar)->maxLength(5000)->rows(3)->extraInputAttributes(['dir' => 'rtl']);
                     $english = Textarea::make($name.'.en')->label($en)->maxLength(5000)->rows(3)->extraInputAttributes(['dir' => 'ltr']);
                     if (in_array($group, ['preloader', 'seo'], true)) {
-                        $arabic->live(debounce: 300);
-                        $english->live(debounce: 300);
+                        $previewKey = $group.'-settings-preview';
+                        $arabic->live(debounce: 300)->partiallyRenderComponentsAfterStateUpdated([$previewKey]);
+                        $english->live(debounce: 300)->partiallyRenderComponentsAfterStateUpdated([$previewKey]);
                     }
                     $items[] = Tabs::make($name)->label($label)->tabs([Tab::make('العربية')->schema([$arabic]), Tab::make('English')->schema([$english])])->columnSpanFull();
 
@@ -111,13 +112,13 @@ class StudioSettings extends Page
                 }if ($type === 'url') {
                     $field->maxLength(2048)->helperText(app()->getLocale() === 'ar' ? 'استخدم {locale} داخل الرابط لاستبدالها بلغة الصفحة، مثال: /{locale}/about' : 'Use {locale} in the URL to insert the current language, for example: /{locale}/about');
                 }if (in_array($group, ['preloader', 'seo'], true)) {
-                    $field->live(debounce: 250);
+                    $field->live(debounce: 250)->partiallyRenderComponentsAfterStateUpdated([$group.'-settings-preview']);
                 }$items[] = $field->label($label);
             }
             if ($group === 'preloader') {
-                $items[] = View::make('filament.pages.partials.preloader-preview')->columnSpanFull();
+                $items[] = View::make('filament.pages.partials.preloader-preview')->key('preloader-settings-preview')->columnSpanFull();
             } elseif ($group === 'seo') {
-                $items[] = View::make('filament.pages.partials.seo-preview')->columnSpanFull();
+                $items[] = View::make('filament.pages.partials.seo-preview')->key('seo-settings-preview')->columnSpanFull();
             }
             $tabs[] = Tab::make(Studio::text($group))->schema($items)->columns(2);
         }
