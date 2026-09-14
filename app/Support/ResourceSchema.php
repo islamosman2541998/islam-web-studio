@@ -52,7 +52,7 @@ class ResourceSchema
             'services' => [['features', 'service_features', 'service_id'], ['packages', 'service_packages', 'service_id']], 'projects' => [['gallery', 'project_media', 'project_id'], ['metrics', 'project_metrics', 'project_id']], 'pages' => [['gallery', 'page_media', 'page_id']], 'sliders' => [['slides', 'slides', 'slider_id']], default => []
         };
         foreach ($children as [$relation,$child,$foreign]) {
-            $result[] = Repeater::make($relation)->label(Studio::text($relation))->relationship($relation)->orderColumn('sort_order')->schema(self::make($child, [$foreign, 'sort_order']))->collapsible()->defaultItems(0)->addActionLabel(Studio::text('add_item'))->columnSpanFull();
+            $result[] = Repeater::make($relation)->label(Studio::text($relation))->relationship($relation)->orderColumn('sort_order')->schema(self::make($child, [$foreign, 'sort_order']))->collapsible()->defaultItems(0)->addActionLabel(Studio::text('add_item'))->partiallyRenderAfterActionsCalled()->columnSpanFull();
         }
         if ($module === 'projects') {
             $result[] = Select::make('services')->label(ModuleRegistry::label('services'))->relationship('services', 'name')->getOptionLabelFromRecordUsing(fn ($record) => $record->titleText())->multiple()->searchable()->preload();

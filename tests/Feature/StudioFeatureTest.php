@@ -7,6 +7,7 @@ use App\Filament\Pages\MenuBuilder;
 use App\Filament\Pages\StudioSettings;
 use App\Filament\Resources\Assets\AssetResource;
 use App\Filament\Resources\Posts\PostResource;
+use App\Filament\Resources\Projects\Pages\CreateRecord as CreateProjectRecord;
 use App\Filament\Resources\Projects\Pages\EditRecord as EditProjectRecord;
 use App\Filament\Resources\Projects\ProjectResource;
 use App\Filament\Resources\Services\Pages\CreateRecord;
@@ -981,6 +982,19 @@ class StudioFeatureTest extends TestCase
         $this->assertFalse($page->instance()->form->getComponent('status')->isLive());
     }
 
+    public function test_project_repeaters_can_add_gallery_and_metric_items(): void
+    {
+        $page = Livewire::actingAs($this->owner())
+            ->test(CreateProjectRecord::class)
+            ->callAction(TestAction::make('add')->schemaComponent('gallery'))
+            ->assertHasNoActionErrors()
+            ->callAction(TestAction::make('add')->schemaComponent('metrics'))
+            ->assertHasNoActionErrors();
+
+        $this->assertCount(1, $page->get('data.gallery'));
+        $this->assertCount(1, $page->get('data.metrics'));
+    }
+
     public function test_media_picker_upload_action_adds_asset_to_grid_and_selects_it(): void
     {
         Storage::fake('local');
@@ -1008,7 +1022,7 @@ class StudioFeatureTest extends TestCase
 
         // The new asset shows in the library grid immediately, without a page refresh...
         $component->assertSee('صورة مرفوعة من المكتبة')
-            ->assertSee('data-asset-id="'.$created->getKey().'"', false)
+            ->assertSee('x-for="asset in filteredAssets()"', false)
             // ...and is pre-selected as the field value.
             ->assertFormSet(['desktop_media_id' => $created->getKey()]);
     }

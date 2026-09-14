@@ -45,13 +45,25 @@ class MediaLibraryPicker extends ViewField
     /** @return Collection<int, Asset> */
     public function getMediaAssets(): Collection
     {
-        return Asset::query()
+        $cacheKey = 'iws.media-library.'.implode(',', $this->mediaTypes);
+        $request = request();
+        $cached = $request->attributes->get($cacheKey);
+
+        if ($cached instanceof Collection) {
+            return $cached;
+        }
+
+        $assets = Asset::query()
             ->with('media')
             ->where('visibility', 'public')
             ->where('is_active', true)
             ->whereIn('kind', $this->mediaTypes)
             ->latest('id')
             ->get();
+
+        $request->attributes->set($cacheKey, $assets);
+
+        return $assets;
     }
 
     public function getUploadMediaAction(): Action
