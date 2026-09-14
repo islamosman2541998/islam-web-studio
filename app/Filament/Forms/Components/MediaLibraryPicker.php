@@ -8,9 +8,11 @@ use App\Support\Studio;
 use Filament\Actions\Action;
 use Filament\Forms\Components\ViewField;
 use Filament\Notifications\Notification;
+use Filament\Support\Components\Attributes\ExposedLivewireMethod;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Renderless;
 
 class MediaLibraryPicker extends ViewField
 {
@@ -64,6 +66,49 @@ class MediaLibraryPicker extends ViewField
         $request->attributes->set($cacheKey, $assets);
 
         return $assets;
+    }
+
+    /**
+     * The library grid is fetched when the modal opens instead of being embedded in every
+     * picker, so heavy forms stay small no matter how large the library grows.
+     *
+     * @return array<int, array{id: string, name: string, kind: string, kindLabel: string, thumbnailUrl: string, previewUrl: string, alt: string, search: string}>
+     */
+    #[ExposedLivewireMethod]
+    #[Renderless]
+    public function getMediaLibraryItems(): array
+    {
+        return $this->getMediaAssets()->map(fn (Asset $asset): array => $this->toMediaItem($asset))->values()->all();
+    }
+
+    /** @return array{id: string, name: string, kind: string, kindLabel: string, thumbnailUrl: string, previewUrl: string, alt: string, search: string}|null */
+    public function getSelectedMediaItem(): ?array
+    {
+        $state = $this->getState();
+        if (blank($state)) {
+            return null;
+        }
+
+        $asset = $this->getMediaAssets()->first(fn (Asset $asset): bool => (string) $asset->getKey() === (string) $state);
+
+        return $asset ? $this->toMediaItem($asset) : null;
+    }
+
+    /** @return array{id: string, name: string, kind: string, kindLabel: string, thumbnailUrl: string, previewUrl: string, alt: string, search: string} */
+    protected function toMediaItem(Asset $asset): array
+    {
+        $name = $asset->titleText() ?: $asset->titleText('ar') ?: $asset->titleText('en') ?: '#'.$asset->getKey();
+
+        return [
+            'id' => (string) $asset->getKey(),
+            'name' => $name,
+            'kind' => $asset->kind,
+            'kindLabel' => Studio::text($asset->kind),
+            'thumbnailUrl' => $asset->kind === 'image' ? $asset->imageUrl(480) : $asset->publicUrl(),
+            'previewUrl' => $asset->kind === 'image' ? $asset->imageUrl(1600) : $asset->publicUrl(),
+            'alt' => $asset->text('alt') ?: $name,
+            'search' => mb_strtolower(trim($asset->titleText('ar').' '.$asset->titleText('en').' '.$asset->kind.' '.$asset->getKey())),
+        ];
     }
 
     public function getUploadMediaAction(): Action

@@ -17,11 +17,7 @@ class Preloader
                 ? ($values[$key] ?? $default)
                 : Studio::setting('preloader.'.$key, $default);
         };
-        $asset = static fn (mixed $id): ?Asset => Asset::query()
-            ->where('kind', 'image')
-            ->where('visibility', 'public')
-            ->where('is_active', true)
-            ->find(is_numeric($id) ? (int) $id : null);
+        $asset = static fn (mixed $id): ?Asset => Asset::publicImage($id);
         $clamp = static fn (mixed $value, int $min, int $max, int $fallback): int => is_numeric($value)
             ? max($min, min($max, (int) $value))
             : $fallback;

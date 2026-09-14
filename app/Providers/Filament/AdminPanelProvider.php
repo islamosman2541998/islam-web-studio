@@ -41,7 +41,7 @@ class AdminPanelProvider extends PanelProvider
                 ? FontRegistry::arabic(Studio::setting('design.arabic_font'))
                 : FontRegistry::english(Studio::setting('design.english_font')), url: asset('brand/fonts.css'), provider: LocalFontProvider::class)
             ->viteTheme('resources/css/filament/admin/theme.css')->darkMode()->sidebarCollapsibleOnDesktop(fn () => Studio::setting('dashboard.compact_sidebar', true))->spa()
-            ->databaseNotifications()->databaseNotificationsPolling('10s')
+            ->databaseNotifications()->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->pages([Dashboard::class, StudioSettings::class, MenuBuilder::class, LeadPipeline::class])
             ->widgets([StudioStats::class, LeadActivityChart::class, ContentStatusChart::class])

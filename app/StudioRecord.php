@@ -50,7 +50,9 @@ abstract class StudioRecord extends Model
     protected static function booted(): void
     {
         static::saved(function (self $record): void {
-            Studio::flush();
+            if ($record->wasRecentlyCreated || $record->wasChanged()) {
+                Studio::flush();
+            }
             if ($record instanceof Asset && $record->upload_path && ($record->wasRecentlyCreated || $record->wasChanged('upload_path'))) {
                 app(MediaPipeline::class)->ingest($record);
                 if ($record->kind === 'image') {

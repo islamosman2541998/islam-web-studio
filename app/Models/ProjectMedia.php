@@ -11,6 +11,18 @@ class ProjectMedia extends StudioRecord
 
     public array $translatable = ['caption'];
 
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saving(function (self $entry): void {
+            $kind = Asset::kindOf($entry->media_id);
+            if (in_array($kind, ['image', 'video'], true)) {
+                $entry->type = $kind;
+            }
+        });
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'project_id');

@@ -11,6 +11,20 @@ class PageMedia extends StudioRecord
 
     public array $translatable = ['caption'];
 
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saving(function (self $entry): void {
+            $entry->kind = match (Asset::kindOf($entry->media_id)) {
+                'image' => 'gallery_image',
+                'video' => 'video',
+                'file' => 'file',
+                default => $entry->kind,
+            };
+        });
+    }
+
     public function page(): BelongsTo
     {
         return $this->belongsTo(Page::class, 'page_id');

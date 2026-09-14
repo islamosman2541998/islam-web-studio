@@ -31,6 +31,7 @@ return [
     'select_media' => 'اختيار',
     'select_this_media' => 'اختيار هذه الميديا',
     'media_library_empty' => 'مكتبة الوسائط فارغة',
+    'media_library_loading' => 'جاري تحميل المكتبة...',
     'opacity_help' => '0% بدون لون، و100% لون كامل.',
     'font_size_help' => 'الحجم بالبكسل من 9 إلى 48.',
     'preloader_logo_size_help' => 'عرض اللوجو بالبكسل من 40 إلى 240.',

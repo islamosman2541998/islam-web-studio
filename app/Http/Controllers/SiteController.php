@@ -40,11 +40,7 @@ class SiteController extends Controller
     public function home(string $locale)
     {
         $record = Page::published()->where('template', 'home')->first();
-        $introMedia = Asset::query()
-            ->where('kind', 'image')
-            ->where('visibility', 'public')
-            ->where('is_active', true)
-            ->find(Studio::setting('home.intro_media'));
+        $introMedia = Asset::publicImage(Studio::setting('home.intro_media'));
 
         return view('site.home', [
             'isHome' => true,

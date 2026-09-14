@@ -139,11 +139,17 @@ class ResourceTable
                 Notification::make()->success()->title(Studio::text('export_queued'))->body(Studio::text('export_help'))->send();
             });
         }
-        $table->columns($columns)->filters($filters)->filtersLayout(FiltersLayout::Modal)->deferFilters(false)->searchDebounce('400ms')->defaultSort('id', 'desc')->recordActions($actions)->toolbarActions($toolbar)->paginated([10, 25, 50, 100])->striped()->emptyStateHeading(Studio::text('no_records'))->recordUrl($readonly ? null : fn ($record) => $table->getLivewire()::getResource()::getUrl('edit', ['record' => $record]))->poll('30s');
+        $table->columns($columns)->filters($filters)->filtersLayout(FiltersLayout::Modal)->deferFilters(false)->searchDebounce('400ms')->defaultSort('id', 'desc')->recordActions($actions)->toolbarActions($toolbar)->paginated([10, 25, 50, 100])->striped()->emptyStateHeading(Studio::text('no_records'))->recordUrl($readonly ? null : fn ($record) => $table->getLivewire()::getResource()::getUrl('edit', ['record' => $record]))->poll(self::pollingInterval($module));
         if (isset($fields['sort_order']) && ! $readonly) {
             $table->reorderable('sort_order', fn () => ModuleRegistry::permission($module, 'update'));
         }
 
         return $table;
+    }
+
+    /** Only lists whose rows change in the background (new enquiries, export progress) re-poll; every poll re-renders the whole table. */
+    public static function pollingInterval(string $module): ?string
+    {
+        return in_array($module, ['leads', 'export_runs'], true) ? '30s' : null;
     }
 }

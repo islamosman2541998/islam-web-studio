@@ -31,6 +31,7 @@ return [
     'select_media' => 'Select',
     'select_this_media' => 'Select this media',
     'media_library_empty' => 'The media library is empty',
+    'media_library_loading' => 'Loading the library...',
     'opacity_help' => '0% removes the color, and 100% makes it fully solid.',
     'font_size_help' => 'Font size in pixels, from 9 to 48.',
     'preloader_logo_size_help' => 'Logo width in pixels, from 40 to 240.',

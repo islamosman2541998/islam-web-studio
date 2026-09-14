@@ -1,7 +1,7 @@
 @php
 use App\Support\Studio;
 $locale=app()->getLocale();$isHome=$isHome??false;$seo=$seo??\App\Support\Seo::make();$otherLocale=$locale==='ar'?'en':'ar';$alternate=$seo['alternates'][$otherLocale]??route('home',['locale'=>$otherLocale]);$loader=\App\Support\Preloader::make();
-$favicon=$seo['logo']?:\App\Models\Asset::query()->where('kind','image')->where('visibility','public')->where('is_active',true)->find(Studio::setting('general.favicon'));$faviconPath=$favicon?->imageUrl(320);$faviconUrl=$faviconPath?(preg_match('~^https?://~i',$faviconPath)?$faviconPath:url($faviconPath)):asset('brand/mark.svg');
+$favicon=$seo['logo']?:\App\Models\Asset::publicImage(Studio::setting('general.favicon'));$faviconPath=$favicon?->imageUrl(320);$faviconUrl=$faviconPath?(preg_match('~^https?://~i',$faviconPath)?$faviconPath:url($faviconPath)):asset('brand/mark.svg');
 @endphp
 <!doctype html><html lang="{{ $locale }}" dir="{{ $locale==='ar'?'rtl':'ltr' }}" data-theme="{{ \App\Support\Studio::setting('design.default_theme','light') }}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="{{ Studio::color(Studio::setting('design.primary'),'#0A3323') }}">

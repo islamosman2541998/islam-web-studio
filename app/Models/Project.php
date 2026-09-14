@@ -13,6 +13,18 @@ class Project extends StudioRecord
 
     public array $translatable = ['title', 'slug', 'duration', 'overview', 'challenge', 'solution', 'result', 'meta_title', 'meta_description', 'keywords'];
 
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saving(function (self $project): void {
+            $kind = Asset::kindOf($project->main_media_id);
+            if (in_array($kind, ['image', 'video'], true)) {
+                $project->main_media_type = $kind;
+            }
+        });
+    }
+
     public function gallery(): HasMany
     {
         return $this->hasMany(ProjectMedia::class)->orderBy('sort_order');

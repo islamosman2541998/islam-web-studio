@@ -179,11 +179,7 @@ class Seo
 
     private static function imageAsset(mixed $id): ?Asset
     {
-        return Asset::query()
-            ->where('kind', 'image')
-            ->where('visibility', 'public')
-            ->where('is_active', true)
-            ->find(is_numeric($id) ? (int) $id : null);
+        return Asset::publicImage($id);
     }
 
     private static function assetUrl(?Asset $asset, int $width): ?string

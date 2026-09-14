@@ -1,22 +1,8 @@
 @php
     use App\Support\Studio;
 
-    $assets = $field->getMediaAssets();
     $modalId = $field->getModalId();
-    $assetData = $assets->map(function ($asset) {
-        $name = $asset->titleText() ?: $asset->titleText('ar') ?: $asset->titleText('en') ?: '#'.$asset->getKey();
-
-        return [
-            'id' => (string) $asset->getKey(),
-            'name' => $name,
-            'kind' => $asset->kind,
-            'kindLabel' => Studio::text($asset->kind),
-            'thumbnailUrl' => $asset->kind === 'image' ? $asset->imageUrl(480) : $asset->publicUrl(),
-            'previewUrl' => $asset->kind === 'image' ? $asset->imageUrl(1600) : $asset->publicUrl(),
-            'alt' => $asset->text('alt') ?: $name,
-            'search' => mb_strtolower(trim($asset->titleText('ar').' '.$asset->titleText('en').' '.$asset->kind.' '.$asset->getKey())),
-        ];
-    })->values();
+    $selectedItem = $field->getSelectedMediaItem();
 @endphp
 
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
@@ -24,19 +10,37 @@
         class="iws-media-picker"
         x-data="{
             state: $wire.{!! $field->applyStateBindingModifiers("\$entangle('{$getStatePath()}')") !!},
-            assets: @js($assetData),
+            selected: @js($selectedItem),
+            assets: [],
+            hasLoaded: false,
+            isLoading: false,
             search: '',
             previewId: '',
             init() {
-                this.previewId = String(this.state || this.firstAssetId())
+                this.previewId = String(this.state || '')
                 this.$watch('state', (value) => {
                     if (value) {
                         this.previewId = String(value)
                     }
                 })
             },
-            assetIds() {
-                return this.assets.map((asset) => asset.id)
+            async loadAssets() {
+                if (this.isLoading) {
+                    return
+                }
+
+                this.isLoading = true
+
+                try {
+                    this.assets = (await $wire.callSchemaComponentMethod(@js($field->getKey()), 'getMediaLibraryItems')) ?? []
+                    this.hasLoaded = true
+
+                    if (! this.asset(this.previewId)) {
+                        this.previewId = String(this.state || this.firstAssetId())
+                    }
+                } finally {
+                    this.isLoading = false
+                }
             },
             firstAssetId() {
                 return this.assets[0]?.id ?? ''
@@ -45,7 +49,13 @@
                 return this.assets.find((asset) => asset.id === String(id ?? '')) ?? null
             },
             selectedAsset() {
-                return this.asset(this.state)
+                const current = String(this.state ?? '')
+
+                if (! current) {
+                    return null
+                }
+
+                return this.selected?.id === current ? this.selected : this.asset(current)
             },
             previewAsset() {
                 return this.asset(this.previewId)
@@ -54,7 +64,7 @@
                 return String(this.state ?? '') === String(id)
             },
             hasSelection() {
-                return this.assetIds().includes(String(this.state ?? ''))
+                return this.selectedAsset() !== null
             },
             matches(text) {
                 return ! this.search.trim() || text.includes(this.search.trim().toLocaleLowerCase())
@@ -69,16 +79,17 @@
                 this.search = ''
                 this.previewId = String(this.state || this.firstAssetId())
                 this.$dispatch('open-modal', { id: @js($modalId) })
+                this.loadAssets()
             },
             selectAsset(id) {
-                const value = Number(id)
-
-                this.state = value
+                this.selected = this.asset(id) ?? this.selected
+                this.state = Number(id)
                 this.previewId = String(id)
                 this.$dispatch('close-modal', { id: @js($modalId) })
             },
             clearSelection() {
                 this.state = null
+                this.selected = null
             },
             handleUpload(event) {
                 if (event.detail?.pickerId !== @js($modalId)) {
@@ -87,10 +98,7 @@
 
                 this.state = Number(event.detail.assetId)
                 this.previewId = String(event.detail.assetId)
-                this.search = ''
-                this.$nextTick(() => setTimeout(() => {
-                    this.$dispatch('open-modal', { id: @js($modalId) })
-                }, 75))
+                this.$nextTick(() => setTimeout(() => this.openLibrary(), 75))
             },
         }"
         x-on:media-library-uploaded.window="handleUpload($event)"
@@ -181,97 +189,100 @@
                     </div>
                 </div>
 
-                @if ($assets->isEmpty())
-                    <div class="iws-media-library__no-results">
-                        <strong>{{ Studio::text('media_library_empty') }}</strong>
-                        <span>{{ Studio::text('media_no_results') }}</span>
-                    </div>
-                @else
-                    <div class="iws-media-library__layout">
-                        <div class="iws-media-library__browser">
-                            <div class="iws-media-library__grid" role="list">
-                                <template x-for="asset in filteredAssets()" x-bind:key="asset.id">
-                                    <article
-                                        class="iws-media-library__card"
-                                        role="listitem"
-                                        x-bind:data-asset-id="asset.id"
-                                        x-bind:class="{ 'is-selected': isSelected(asset.id), 'is-previewing': previewId === asset.id }"
+                <div class="iws-media-library__no-results" x-show="! hasLoaded">
+                    <x-filament::loading-indicator class="iws-media-library__loading-indicator" />
+                    <span>{{ Studio::text('media_library_loading') }}</span>
+                </div>
+
+                <div class="iws-media-library__no-results" x-cloak x-show="hasLoaded && ! assets.length">
+                    <strong>{{ Studio::text('media_library_empty') }}</strong>
+                    <span>{{ Studio::text('media_no_results') }}</span>
+                </div>
+
+                <div class="iws-media-library__layout" x-cloak x-show="hasLoaded && assets.length">
+                    <div class="iws-media-library__browser">
+                        <div class="iws-media-library__grid" role="list">
+                            <template x-for="asset in filteredAssets()" x-bind:key="asset.id">
+                                <article
+                                    class="iws-media-library__card"
+                                    role="listitem"
+                                    x-bind:data-asset-id="asset.id"
+                                    x-bind:class="{ 'is-selected': isSelected(asset.id), 'is-previewing': previewId === asset.id }"
+                                >
+                                    <button
+                                        type="button"
+                                        class="iws-media-library__card-main"
+                                        x-on:click="previewId = asset.id"
+                                        x-bind:aria-label="@js(Studio::text('preview')).concat(': ', asset.name)"
                                     >
-                                        <button
-                                            type="button"
-                                            class="iws-media-library__card-main"
-                                            x-on:click="previewId = asset.id"
-                                            x-bind:aria-label="@js(Studio::text('preview')).concat(': ', asset.name)"
-                                        >
-                                            <span class="iws-media-library__thumb">
-                                                <template x-if="asset.kind === 'image' && asset.thumbnailUrl">
-                                                    <img x-bind:src="asset.thumbnailUrl" alt="" loading="lazy">
-                                                </template>
-                                                <template x-if="asset.kind === 'video' && asset.thumbnailUrl">
-                                                    <video x-bind:src="asset.thumbnailUrl + '#t=0.1'" muted playsinline preload="metadata" tabindex="-1"></video>
-                                                </template>
-                                                <template x-if="asset.kind === 'video'">
-                                                    <span class="iws-media-library__play" aria-hidden="true">▶</span>
-                                                </template>
-                                                <template x-if="asset.kind === 'file'">
-                                                    <span class="iws-media-library__file" aria-hidden="true">⌁</span>
-                                                </template>
-                                            </span>
-                                            <span class="iws-media-library__card-copy">
-                                                <strong x-bind:title="asset.name" x-text="asset.name"></strong>
-                                                <small><span x-text="asset.kindLabel"></span> · #<span x-text="asset.id"></span></small>
-                                            </span>
+                                        <span class="iws-media-library__thumb">
+                                            <template x-if="asset.kind === 'image' && asset.thumbnailUrl">
+                                                <img x-bind:src="asset.thumbnailUrl" alt="" loading="lazy">
+                                            </template>
+                                            <template x-if="asset.kind === 'video' && asset.thumbnailUrl">
+                                                <video x-bind:src="asset.thumbnailUrl + '#t=0.1'" muted playsinline preload="metadata" tabindex="-1"></video>
+                                            </template>
+                                            <template x-if="asset.kind === 'video'">
+                                                <span class="iws-media-library__play" aria-hidden="true">▶</span>
+                                            </template>
+                                            <template x-if="asset.kind === 'file'">
+                                                <span class="iws-media-library__file" aria-hidden="true">⌁</span>
+                                            </template>
+                                        </span>
+                                        <span class="iws-media-library__card-copy">
+                                            <strong x-bind:title="asset.name" x-text="asset.name"></strong>
+                                            <small><span x-text="asset.kindLabel"></span> · #<span x-text="asset.id"></span></small>
+                                        </span>
+                                    </button>
+
+                                    <div class="iws-media-library__card-actions">
+                                        <button type="button" x-on:click="previewId = asset.id">
+                                            {{ Studio::text('preview') }}
                                         </button>
-
-                                        <div class="iws-media-library__card-actions">
-                                            <button type="button" x-on:click="previewId = asset.id">
-                                                {{ Studio::text('preview') }}
-                                            </button>
-                                            <button type="button" class="is-primary" x-on:click="selectAsset(asset.id)">
-                                                {{ Studio::text('select_media') }}
-                                            </button>
-                                        </div>
-                                    </article>
-                                </template>
-                            </div>
-
-                            <div class="iws-media-library__no-results" x-cloak x-show="! hasMatches()">
-                                <strong>{{ Studio::text('media_no_results') }}</strong>
-                            </div>
+                                        <button type="button" class="is-primary" x-on:click="selectAsset(asset.id)">
+                                            {{ Studio::text('select_media') }}
+                                        </button>
+                                    </div>
+                                </article>
+                            </template>
                         </div>
 
-                        <aside class="iws-media-library__preview" aria-live="polite">
-                            <template x-if="previewAsset()">
-                                <section>
-                                    <div class="iws-media-library__preview-media">
-                                        <template x-if="previewAsset().kind === 'image' && previewAsset().previewUrl">
-                                            <img x-bind:src="previewAsset().previewUrl" x-bind:alt="previewAsset().alt" loading="lazy">
-                                        </template>
-                                        <template x-if="previewAsset().kind === 'video' && previewAsset().previewUrl">
-                                            <video x-bind:src="previewAsset().previewUrl" controls playsinline preload="metadata"></video>
-                                        </template>
-                                        <template x-if="previewAsset().kind === 'file'">
-                                            <div class="iws-media-library__file-preview" aria-hidden="true">⌁</div>
-                                        </template>
-                                    </div>
-                                    <div class="iws-media-library__preview-copy">
-                                        <small>{{ Studio::text('preview') }}</small>
-                                        <h3 x-text="previewAsset().name"></h3>
-                                        <p><span x-text="previewAsset().kindLabel"></span> · #<span x-text="previewAsset().id"></span></p>
-                                    </div>
-                                    <x-filament::button
-                                        type="button"
-                                        x-on:click="selectAsset(previewAsset().id)"
-                                        wire:target="{{ $getStatePath() }}"
-                                        class="iws-media-library__select-button"
-                                    >
-                                        {{ Studio::text('select_this_media') }}
-                                    </x-filament::button>
-                                </section>
-                            </template>
-                        </aside>
+                        <div class="iws-media-library__no-results" x-cloak x-show="! hasMatches()">
+                            <strong>{{ Studio::text('media_no_results') }}</strong>
+                        </div>
                     </div>
-                @endif
+
+                    <aside class="iws-media-library__preview" aria-live="polite">
+                        <template x-if="previewAsset()">
+                            <section>
+                                <div class="iws-media-library__preview-media">
+                                    <template x-if="previewAsset().kind === 'image' && previewAsset().previewUrl">
+                                        <img x-bind:src="previewAsset().previewUrl" x-bind:alt="previewAsset().alt" loading="lazy">
+                                    </template>
+                                    <template x-if="previewAsset().kind === 'video' && previewAsset().previewUrl">
+                                        <video x-bind:src="previewAsset().previewUrl" controls playsinline preload="metadata"></video>
+                                    </template>
+                                    <template x-if="previewAsset().kind === 'file'">
+                                        <div class="iws-media-library__file-preview" aria-hidden="true">⌁</div>
+                                    </template>
+                                </div>
+                                <div class="iws-media-library__preview-copy">
+                                    <small>{{ Studio::text('preview') }}</small>
+                                    <h3 x-text="previewAsset().name"></h3>
+                                    <p><span x-text="previewAsset().kindLabel"></span> · #<span x-text="previewAsset().id"></span></p>
+                                </div>
+                                <x-filament::button
+                                    type="button"
+                                    x-on:click="selectAsset(previewAsset().id)"
+                                    wire:target="{{ $getStatePath() }}"
+                                    class="iws-media-library__select-button"
+                                >
+                                    {{ Studio::text('select_this_media') }}
+                                </x-filament::button>
+                            </section>
+                        </template>
+                    </aside>
+                </div>
             </div>
         </x-filament::modal>
     </div>

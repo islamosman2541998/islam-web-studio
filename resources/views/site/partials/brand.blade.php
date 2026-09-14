@@ -1,4 +1,4 @@
-@php($logo=\App\Models\Asset::find(\App\Support\Studio::setting('general.logo_light')))
+@php($logo=\App\Models\Asset::publicImage(\App\Support\Studio::setting('general.logo_light')))
 <a href="{{ route('home',['locale'=>app()->getLocale()]) }}" class="brand" wire:navigate aria-label="Islam Web Studio — {{ \App\Support\Studio::text('home') }}">
 @if($logo)
 <span class="brand-custom-frame"><img class="brand-custom" src="{{ $logo->imageUrl(320) }}" width="170" height="54" alt="Islam Web Studio"></span>

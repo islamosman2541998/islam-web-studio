@@ -11,6 +11,14 @@ use Intervention\Image\ImageManager;
 
 class MediaPipeline
 {
+    public const AVIF_QUALITY = 62;
+
+    /**
+     * libavif encoder speed (0 slowest - 10 fastest). The default (6) spends ~11s per
+     * upload on a typical 1600px image; 8 is ~3.5x faster and still smaller than WebP.
+     */
+    public const AVIF_SPEED = 8;
+
     public function process(Asset $asset): void
     {
         if ($asset->upload_path) {
@@ -109,7 +117,14 @@ class MediaPipeline
                     continue;
                 }
                 $relative = $folder.'/'.$width.'.'.$format;
-                $scaled->encodeUsingFileExtension($format, quality: $format === 'avif' ? 62 : 80)->save(Storage::disk($disk)->path($relative));
+                $path = Storage::disk($disk)->path($relative);
+                if ($format === 'avif') {
+                    if (! imageavif($scaled->core()->native(), $path, self::AVIF_QUALITY, self::AVIF_SPEED)) {
+                        throw new \RuntimeException('AVIF encoding failed.');
+                    }
+                } else {
+                    $scaled->encodeUsingFileExtension($format, quality: 80)->save($path);
+                }
                 $conversions[$format][(string) $width] = $relative;
             }
         }

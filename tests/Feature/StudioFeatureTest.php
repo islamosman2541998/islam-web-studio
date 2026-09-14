@@ -6,6 +6,7 @@ use App\Filament\Forms\Components\MediaLibraryPicker;
 use App\Filament\Pages\MenuBuilder;
 use App\Filament\Pages\StudioSettings;
 use App\Filament\Resources\Assets\AssetResource;
+use App\Filament\Resources\Leads\Pages\ListRecords as ListLeadRecords;
 use App\Filament\Resources\Posts\PostResource;
 use App\Filament\Resources\Projects\Pages\CreateRecord as CreateProjectRecord;
 use App\Filament\Resources\Projects\Pages\EditRecord as EditProjectRecord;
@@ -30,6 +31,7 @@ use App\Models\MenuItem;
 use App\Models\MenuLocation;
 use App\Models\MethodologyStep;
 use App\Models\Page;
+use App\Models\PageMedia;
 use App\Models\Post;
 use App\Models\PostCategory;
 use App\Models\Project;
@@ -56,6 +58,8 @@ use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -865,7 +869,7 @@ class StudioFeatureTest extends TestCase
         $selected = Lead::factory()->create(['name' => 'Selected request', 'created_at' => '2026-08-31 22:30:00']);
         Lead::factory()->create(['name' => 'Selected old request', 'created_at' => '2026-07-31 22:30:00']);
         Lead::factory()->create(['name' => 'Other request', 'created_at' => '2026-08-15 12:00:00']);
-        Livewire::actingAs($owner)->test(\App\Filament\Resources\Leads\Pages\ListRecords::class)
+        Livewire::actingAs($owner)->test(ListLeadRecords::class)
             ->searchTable('Selected')->filterTable('created_range', ['from' => '2026-08-01', 'until' => '2026-08-31'])
             ->assertCanSeeTableRecords([$selected])->callAction(TestAction::make('export')->table(), ['locale' => 'both'])->assertHasNoActionErrors();
         $run = ExportRun::firstOrFail();
@@ -1025,6 +1029,94 @@ class StudioFeatureTest extends TestCase
             ->assertSee('x-for="asset in filteredAssets()"', false)
             // ...and is pre-selected as the field value.
             ->assertFormSet(['desktop_media_id' => $created->getKey()]);
+    }
+
+    public function test_media_picker_loads_the_library_on_demand_instead_of_embedding_it(): void
+    {
+        $chosen = Asset::factory()->create(['kind' => 'image', 'name' => ['ar' => 'Chosen image', 'en' => 'Chosen image']]);
+        $other = Asset::factory()->create(['kind' => 'image', 'name' => ['ar' => 'Unchosen image', 'en' => 'Unchosen image']]);
+        $video = Asset::factory()->create(['kind' => 'video', 'name' => ['ar' => 'Library video', 'en' => 'Library video']]);
+        $file = Asset::factory()->create(['kind' => 'file', 'name' => ['ar' => 'Library file', 'en' => 'Library file']]);
+
+        $page = Livewire::actingAs($this->owner())
+            ->test(CreateSlideRecord::class)
+            ->fillForm(['desktop_media_id' => $chosen->id])
+            ->assertSee('Chosen image')
+            ->assertDontSee('Unchosen image')
+            ->assertDontSee('Library video');
+
+        $key = $page->instance()->form->getComponent('desktop_media_id')->getKey();
+
+        $page->call('callSchemaComponentMethod', $key, 'getMediaLibraryItems')
+            ->assertReturned(function (array $items) use ($chosen, $other, $video, $file): bool {
+                $ids = collect($items)->pluck('id');
+
+                return $ids->contains((string) $chosen->id)
+                    && $ids->contains((string) $other->id)
+                    && $ids->contains((string) $video->id)
+                    && ! $ids->contains((string) $file->id);
+            });
+    }
+
+    public function test_media_type_columns_follow_the_selected_file(): void
+    {
+        $video = Asset::factory()->create(['kind' => 'video']);
+        $image = Asset::factory()->create(['kind' => 'image']);
+        $file = Asset::factory()->create(['kind' => 'file']);
+
+        $project = Project::factory()->create(['main_media_type' => 'image', 'main_media_id' => $video->id]);
+        $this->assertSame('video', $project->refresh()->main_media_type);
+
+        $project->update(['main_media_id' => $image->id]);
+        $this->assertSame('image', $project->refresh()->main_media_type);
+
+        $entry = ProjectMedia::create(['project_id' => $project->id, 'media_id' => $video->id, 'type' => 'image', 'sort_order' => 0]);
+        $this->assertSame('video', $entry->refresh()->type);
+
+        $page = Page::factory()->create();
+        $download = PageMedia::create(['page_id' => $page->id, 'media_id' => $file->id, 'kind' => 'gallery_image', 'sort_order' => 0]);
+        $this->assertSame('file', $download->refresh()->kind);
+    }
+
+    public function test_public_image_lookups_skip_empty_ids_and_run_once_per_request(): void
+    {
+        $logo = Asset::factory()->create(['kind' => 'image']);
+        $video = Asset::factory()->create(['kind' => 'video']);
+        $queries = 0;
+        DB::listen(function ($query) use (&$queries): void {
+            if (str_contains($query->sql, '`assets`')) {
+                $queries++;
+            }
+        });
+
+        $this->assertNull(Asset::publicImage(null));
+        $this->assertNull(Asset::publicImage(''));
+        $this->assertSame(0, $queries);
+
+        $this->assertTrue($logo->is(Asset::publicImage($logo->id)));
+        $this->assertTrue($logo->is(Asset::publicImage((string) $logo->id)));
+        $this->assertNull(Asset::publicImage($video->id));
+        $this->assertSame(2, $queries);
+    }
+
+    public function test_saving_an_unchanged_record_keeps_site_caches(): void
+    {
+        $project = Project::findOrFail(Project::factory()->create()->id);
+        Cache::memo()->forever('studio.menu.version', 'before');
+
+        $project->save();
+        $this->assertSame('before', Cache::memo()->get('studio.menu.version'));
+
+        $project->update(['client' => 'Changed client']);
+        $this->assertNotSame('before', Cache::memo()->get('studio.menu.version'));
+    }
+
+    public function test_only_background_changing_lists_poll(): void
+    {
+        $owner = $this->owner();
+
+        $this->assertNull(Livewire::actingAs($owner)->test(ListRecords::class)->instance()->getTable()->getPollingInterval());
+        $this->assertSame('30s', Livewire::actingAs($owner)->test(ListLeadRecords::class)->instance()->getTable()->getPollingInterval());
     }
 
     public function test_media_uploads_have_separate_image_and_video_size_limits_with_clear_errors(): void
