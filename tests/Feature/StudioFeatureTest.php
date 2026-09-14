@@ -255,6 +255,21 @@ class StudioFeatureTest extends TestCase
         $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /');
     }
 
+    public function test_demo_mode_blocks_indexing_and_warns_in_settings(): void
+    {
+        $warning = Studio::text('seo_demo_mode_blocks_indexing');
+
+        $this->get('/robots.txt')->assertSee("Disallow: /\n", false);
+        $this->get('/ar')->assertSee('content="noindex,nofollow"', false);
+        Livewire::actingAs($this->owner())->test(StudioSettings::class)->assertSee($warning);
+
+        config(['studio.demo' => false]);
+
+        $this->get('/robots.txt')->assertSee('Allow: /')->assertSee('Sitemap: ');
+        $this->get('/ar')->assertSee('content="index,follow', false)->assertDontSee('noindex', false);
+        Livewire::actingAs($this->owner())->test(StudioSettings::class)->assertDontSee($warning);
+    }
+
     public function test_google_metadata_uses_managed_home_settings_and_complete_structured_data(): void
     {
         config(['studio.demo' => false]);
@@ -1203,7 +1218,8 @@ class StudioFeatureTest extends TestCase
         $this->assertArrayNotHasKey('location', ModuleRegistry::get('sliders')['fields']);
 
         $response = $this->get('/en')->assertOk()->assertSee('Home hero test')->assertSee('id="home-hero"', false)->assertSee('hero-media', false);
-        $this->assertSame(1, substr_count($response->getContent(), '<h3 class="slide-title"'));
+        $this->assertSame(1, substr_count($response->getContent(), '<h1 class="slide-title"'));
+        $this->assertSame(1, substr_count($response->getContent(), '<h1'));
         $response->assertSee('preload="none"', false)->assertSee('data-src=', false);
 
         $this->get('/en/'.$page->text('slug', 'en'))->assertOk()->assertDontSee('Home hero test')->assertDontSee('id="home-hero"', false);
@@ -1238,6 +1254,7 @@ class StudioFeatureTest extends TestCase
             ->assertSee('class="hero-media"', false)
             ->assertDontSee('class="hero-content"', false)
             ->assertDontSee('class="slide-title"', false)
+            ->assertSee('<h1 class="sr-only">', false)
             ->assertDontSee('hero-kicker', false)
             ->assertDontSee('hero-signature', false)
             ->assertDontSee('Digital solutions · Cairo');

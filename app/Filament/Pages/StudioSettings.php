@@ -111,6 +111,8 @@ class StudioSettings extends Page
                     $field->rules(['nullable', 'regex:/^[A-Za-z0-9_-]+$/']);
                 }if ($type === 'url') {
                     $field->maxLength(2048)->helperText(app()->getLocale() === 'ar' ? 'استخدم {locale} داخل الرابط لاستبدالها بلغة الصفحة، مثال: /{locale}/about' : 'Use {locale} in the URL to insert the current language, for example: /{locale}/about');
+                }if ($name === 'seo.index' && config('studio.demo')) {
+                    $field->hint(Studio::text('seo_demo_mode_blocks_indexing'))->hintColor('danger')->hintIcon('heroicon-m-exclamation-triangle');
                 }if (in_array($group, ['preloader', 'seo'], true)) {
                     $field->live(debounce: 250)->partiallyRenderComponentsAfterStateUpdated([$group.'-settings-preview']);
                 }$items[] = $field->label($label);

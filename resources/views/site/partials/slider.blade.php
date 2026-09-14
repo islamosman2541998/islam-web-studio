@@ -1,5 +1,8 @@
 @if($slider && $slider->slides->count())
 <section class="hero" id="home-hero" aria-label="{{ $slider->name }}">
+    @if(blank($slider->slides->first()->text('title')))
+        <h1 class="sr-only">{{ \App\Support\Studio::translated('general.site_name') }}</h1>
+    @endif
     <div
         class="swiper hero-swiper"
         data-studio-swiper
@@ -37,7 +40,11 @@
                         <div class="shell hero-layout">
                             <div class="hero-content">
                             @if(filled($slideTitle))
-                                <h3 class="slide-title">{{ $slideTitle }}</h3>
+                                @if($loop->first)
+                                    <h1 class="slide-title">{{ $slideTitle }}</h1>
+                                @else
+                                    <h2 class="slide-title">{{ $slideTitle }}</h2>
+                                @endif
                             @endif
                             @if(filled($slideDescription))
                                 <p class="hero-description">{{ $slideDescription }}</p>
@@ -70,7 +77,7 @@
     <div class="hero-scrim" aria-hidden="true"></div>
     <div class="shell hero-layout">
         <div class="hero-content">
-            <h3 class="slide-title">{{ \App\Support\Studio::translated('general.tagline') }}</h3>
+            <h1 class="slide-title">{{ \App\Support\Studio::translated('general.tagline') }}</h1>
             <a class="button hero-button" href="{{ route('contact', ['locale' => app()->getLocale()]) }}" wire:navigate>@t('request_quote') <x-arrow-up-right /></a>
         </div>
     </div>

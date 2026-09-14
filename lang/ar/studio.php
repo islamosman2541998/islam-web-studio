@@ -32,6 +32,7 @@ return [
     'select_this_media' => 'اختيار هذه الميديا',
     'media_library_empty' => 'مكتبة الوسائط فارغة',
     'media_library_loading' => 'جاري تحميل المكتبة...',
+    'seo_demo_mode_blocks_indexing' => 'وضع العرض التجريبي (DEMO_MODE) مفعّل على السيرفر، وده بيمنع جوجل من أرشفة الموقع مهما كان الاختيار هنا. خلّي DEMO_MODE=false في ملف .env.',
     'opacity_help' => '0% بدون لون، و100% لون كامل.',
     'font_size_help' => 'الحجم بالبكسل من 9 إلى 48.',
     'preloader_logo_size_help' => 'عرض اللوجو بالبكسل من 40 إلى 240.',
