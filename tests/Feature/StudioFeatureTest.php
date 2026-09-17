@@ -1051,6 +1051,90 @@ class StudioFeatureTest extends TestCase
         $this->assertCount(1, $page->get('data.metrics'));
     }
 
+    public function test_project_gallery_can_append_mixed_media_in_one_action_without_duplicates(): void
+    {
+        $image = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
+        $video = Asset::factory()->create(['kind' => 'video', 'visibility' => 'public', 'is_active' => true]);
+        $file = Asset::factory()->create(['kind' => 'file', 'visibility' => 'public', 'is_active' => true]);
+
+        $page = Livewire::actingAs($this->owner())
+            ->test(CreateProjectRecord::class)
+            ->assertSee(Studio::text('gallery_batch_open'));
+
+        $galleryKey = $page->instance()->form->getComponent('gallery')->getKey();
+        $this->assertSame($galleryKey, $page->instance()->form->getComponent('gallery_batch')->getGalleryTarget());
+        $page->call('callSchemaComponentMethod', $galleryKey, 'appendMedia', [[$image->id, $video->id, $file->id]]);
+
+        $gallery = array_values($page->get('data.gallery'));
+        $this->assertCount(2, $gallery);
+        $this->assertSame([$image->id, $video->id], array_column($gallery, 'media_id'));
+        $this->assertSame(['image', 'video'], array_column($gallery, 'type'));
+
+        $page->call('callSchemaComponentMethod', $galleryKey, 'appendMedia', [[$video->id, $image->id]]);
+        $this->assertCount(2, $page->get('data.gallery'));
+    }
+
+    public function test_project_gallery_batch_saves_all_selected_media(): void
+    {
+        $project = Project::factory()->create(['project_category_id' => ProjectCategory::factory()->create()->id]);
+        $image = Asset::factory()->create(['kind' => 'image', 'visibility' => 'public', 'is_active' => true]);
+        $video = Asset::factory()->create(['kind' => 'video', 'visibility' => 'public', 'is_active' => true]);
+
+        $page = Livewire::actingAs($this->owner())
+            ->test(EditProjectRecord::class, ['record' => $project->getKey()]);
+
+        $galleryKey = $page->instance()->form->getComponent('gallery')->getKey();
+        $page->call('callSchemaComponentMethod', $galleryKey, 'appendMedia', [[$image->id, $video->id]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame([$image->id, $video->id], $project->fresh()->gallery()->pluck('media_id')->all());
+    }
+
+    public function test_project_gallery_upload_action_accepts_multiple_files_without_names(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Queue::fake();
+
+        Livewire::actingAs($this->owner())
+            ->test(CreateProjectRecord::class)
+            ->callAction(
+                TestAction::make('uploadMedia')->schemaComponent('gallery_batch'),
+                ['upload_path' => [
+                    UploadedFile::fake()->image('first-batch.jpg', 320, 240),
+                    UploadedFile::fake()->image('second-batch.jpg', 320, 240),
+                ]],
+            )
+            ->assertHasNoActionErrors()
+            ->assertDispatched('media-library-uploaded');
+
+        $this->assertCount(2, Asset::query()->get());
+    }
+
+    public function test_media_names_are_optional_for_single_and_batch_uploads(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+        Queue::fake();
+
+        $singlePath = UploadedFile::fake()->image('single-photo.jpg')->store('incoming', 'local');
+        $single = MediaPicker::createAsset(['upload_path' => $singlePath, 'original_names' => 'single-photo.jpg'], ['image']);
+        $this->assertSame('single-photo', $single->titleText('ar'));
+
+        $imagePath = UploadedFile::fake()->image('gallery-photo.jpg')->store('incoming', 'local');
+        $secondImagePath = UploadedFile::fake()->image('gallery-second.jpg')->store('incoming', 'local');
+        $result = MediaPicker::createAssets([
+            'upload_path' => [$imagePath, $secondImagePath],
+            'original_names' => [$imagePath => 'gallery-photo.jpg', $secondImagePath => 'gallery-second.jpg'],
+        ], ['image', 'video']);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertCount(2, $result['assets']);
+        $this->assertSame(['gallery-photo', 'gallery-second'], array_map(fn (Asset $asset) => $asset->titleText('ar'), $result['assets']));
+
+    }
+
     public function test_media_picker_upload_action_adds_asset_to_grid_and_selects_it(): void
     {
         Storage::fake('local');

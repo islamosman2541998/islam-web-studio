@@ -21,6 +21,8 @@ class MediaLibraryPicker extends ViewField
     /** @var array<int, string> */
     protected array $mediaTypes = ['image', 'video', 'file'];
 
+    protected ?string $galleryTarget = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,6 +44,18 @@ class MediaLibraryPicker extends ViewField
     public function getMediaTypes(): array
     {
         return $this->mediaTypes;
+    }
+
+    public function galleryTarget(string $target): static
+    {
+        $this->galleryTarget = $target;
+
+        return $this;
+    }
+
+    public function getGalleryTarget(): ?string
+    {
+        return $this->galleryTarget ? $this->getContainer()->getComponent($this->galleryTarget)?->getKey() : null;
     }
 
     /** @return Collection<int, Asset> */
@@ -84,6 +98,10 @@ class MediaLibraryPicker extends ViewField
     /** @return array{id: string, name: string, kind: string, kindLabel: string, thumbnailUrl: string, previewUrl: string, alt: string, search: string}|null */
     public function getSelectedMediaItem(): ?array
     {
+        if ($this->galleryTarget !== null) {
+            return null;
+        }
+
         $state = $this->getState();
         if (blank($state)) {
             return null;
@@ -118,10 +136,28 @@ class MediaLibraryPicker extends ViewField
             ->icon('heroicon-o-arrow-up-tray')
             ->color('gray')
             ->outlined()
-            ->schema(MediaPicker::uploadForm($this->mediaTypes))
+            ->schema(MediaPicker::uploadForm($this->mediaTypes, $this->galleryTarget !== null))
             ->action(function (array $data): void {
                 try {
-                    $asset = MediaPicker::createAsset($data, $this->mediaTypes);
+                    if ($this->galleryTarget !== null) {
+                        $result = MediaPicker::createAssets($data, $this->mediaTypes);
+                        if ($result['errors'] && $result['assets']) {
+                            Notification::make()
+                                ->title(Studio::text('media_upload_failed_title'))
+                                ->body(implode("\n", $result['errors']))
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                        if (! $result['assets']) {
+                            throw ValidationException::withMessages(['upload_path' => $result['errors'][0] ?? Studio::text('media_processing_failed')]);
+                        }
+                        $assetIds = array_map(fn (Asset $asset): string => (string) $asset->getKey(), $result['assets']);
+                    } else {
+                        $asset = MediaPicker::createAsset($data, $this->mediaTypes);
+                        $this->state($asset->getKey());
+                        $assetIds = [(string) $asset->getKey()];
+                    }
                 } catch (ValidationException $exception) {
                     Notification::make()
                         ->title(Studio::text('media_upload_failed_title'))
@@ -133,11 +169,10 @@ class MediaLibraryPicker extends ViewField
                     throw $exception;
                 }
 
-                $this->state($asset->getKey());
                 $this->getLivewire()->dispatch(
                     'media-library-uploaded',
                     pickerId: $this->getModalId(),
-                    assetId: (string) $asset->getKey(),
+                    assetIds: $assetIds,
                 );
             })
             ->modalHeading(Studio::text('upload_new_media'))

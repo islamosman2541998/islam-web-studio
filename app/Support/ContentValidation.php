@@ -11,6 +11,15 @@ class ContentValidation
 {
     public static function prepare(string $module, array $data, ?StudioRecord $record = null): array
     {
+        if ($module === 'assets') {
+            $originalName = (string) ($data['original_names'] ?? '');
+            $fallback = trim(pathinfo($originalName ?: basename((string) ($data['upload_path'] ?? '')), PATHINFO_FILENAME)) ?: 'Media';
+            $data['name'] = [
+                'ar' => trim((string) ($data['name']['ar'] ?? '')) ?: trim((string) ($data['name']['en'] ?? '')) ?: $fallback,
+                'en' => trim((string) ($data['name']['en'] ?? '')) ?: trim((string) ($data['name']['ar'] ?? '')) ?: $fallback,
+            ];
+            unset($data['original_names']);
+        }
         if ($module === 'menu_items') {
             if (($data['type'] ?? null) === 'route' && ! array_key_exists($data['route_name'] ?? '', MenuResolver::routeOptions())) {
                 throw ValidationException::withMessages(['data.route_name' => Studio::text('invalid_link')]);

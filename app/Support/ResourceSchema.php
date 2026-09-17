@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Filament\Forms\Components\ProjectGalleryRepeater;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -41,6 +43,9 @@ class ResourceSchema
                 $shared[] = self::field($module, $name, $d);
             }
         }
+        if ($module === 'assets') {
+            $shared[] = Hidden::make('original_names');
+        }
         $result = [];
         if ($tabs) {
             $result[] = Tabs::make('languages')->tabs($tabs)->columnSpanFull()->persistTabInQueryString();
@@ -52,7 +57,11 @@ class ResourceSchema
             'services' => [['features', 'service_features', 'service_id'], ['packages', 'service_packages', 'service_id']], 'projects' => [['gallery', 'project_media', 'project_id'], ['metrics', 'project_metrics', 'project_id']], 'pages' => [['gallery', 'page_media', 'page_id']], 'sliders' => [['slides', 'slides', 'slider_id']], default => []
         };
         foreach ($children as [$relation,$child,$foreign]) {
-            $result[] = Repeater::make($relation)->label(Studio::text($relation))->relationship($relation)->orderColumn('sort_order')->schema(self::make($child, [$foreign, 'sort_order']))->collapsible()->defaultItems(0)->addActionLabel(Studio::text('add_item'))->partiallyRenderAfterActionsCalled()->columnSpanFull();
+            if ($module === 'projects' && $relation === 'gallery') {
+                $result[] = MediaPicker::galleryBatch('gallery_batch');
+            }
+            $repeater = $module === 'projects' && $relation === 'gallery' ? ProjectGalleryRepeater::make($relation) : Repeater::make($relation);
+            $result[] = $repeater->label(Studio::text($relation))->relationship($relation)->orderColumn('sort_order')->schema(self::make($child, [$foreign, 'sort_order']))->collapsible()->defaultItems(0)->addActionLabel(Studio::text('add_item'))->partiallyRenderAfterActionsCalled()->columnSpanFull();
         }
         if ($module === 'projects') {
             $result[] = Select::make('services')->label(ModuleRegistry::label('services'))->relationship('services', 'name')->getOptionLabelFromRecordUsing(fn ($record) => $record->titleText())->multiple()->searchable()->preload();
@@ -77,7 +86,7 @@ class ResourceSchema
             'media' => MediaPicker::make($path, $d['types'] ?? 'image,video,file'),
             'datetime' => DateTimePicker::make($path)->seconds(false)->timezone('Africa/Cairo'),
             'color' => ColorPicker::make($path)->hex(),
-            'upload' => MediaPicker::uploadField($path),
+            'upload' => MediaPicker::uploadField($path)->storeFileNamesIn('original_names'),
             'tags' => TagsInput::make($path),
             'route' => Select::make($path)->options(fn () => MenuResolver::routeOptions())->searchable(),
             'dynamic_items' => Select::make($path)->multiple()->searchable()->options(fn (Get $get) => ($source = $get('dynamic_source')) && isset(ModuleRegistry::all()[$source]) ? ModuleRegistry::options(ModuleRegistry::get($source)['model'], true) : []),

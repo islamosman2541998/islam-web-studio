@@ -3,13 +3,17 @@
 
     $modalId = $field->getModalId();
     $selectedItem = $field->getSelectedMediaItem();
+    $galleryTarget = $field->getGalleryTarget();
 @endphp
 
 <x-dynamic-component :component="$getFieldWrapperView()" :field="$field">
     <div
         class="iws-media-picker"
         x-data="{
-            state: $wire.{!! $field->applyStateBindingModifiers("\$entangle('{$getStatePath()}')") !!},
+            state: @if($galleryTarget) null @else $wire.{!! $field->applyStateBindingModifiers("\$entangle('{$getStatePath()}')") !!} @endif,
+            batch: @js($galleryTarget !== null),
+            selectedIds: [],
+            isApplying: false,
             selected: @js($selectedItem),
             assets: [],
             hasLoaded: false,
@@ -17,6 +21,7 @@
             search: '',
             previewId: '',
             init() {
+                if (this.batch) return
                 this.previewId = String(this.state || '')
                 this.$watch('state', (value) => {
                     if (value) {
@@ -36,7 +41,7 @@
                     this.hasLoaded = true
 
                     if (! this.asset(this.previewId)) {
-                        this.previewId = String(this.state || this.firstAssetId())
+                        this.previewId = String(this.batch ? this.firstAssetId() : (this.state || this.firstAssetId()))
                     }
                 } finally {
                     this.isLoading = false
@@ -49,6 +54,7 @@
                 return this.assets.find((asset) => asset.id === String(id ?? '')) ?? null
             },
             selectedAsset() {
+                if (this.batch) return null
                 const current = String(this.state ?? '')
 
                 if (! current) {
@@ -61,7 +67,7 @@
                 return this.asset(this.previewId)
             },
             isSelected(id) {
-                return String(this.state ?? '') === String(id)
+                return this.batch ? this.selectedIds.includes(String(id)) : String(this.state ?? '') === String(id)
             },
             hasSelection() {
                 return this.selectedAsset() !== null
@@ -77,11 +83,19 @@
             },
             openLibrary() {
                 this.search = ''
-                this.previewId = String(this.state || this.firstAssetId())
+                this.previewId = String(this.batch ? this.firstAssetId() : (this.state || this.firstAssetId()))
                 this.$dispatch('open-modal', { id: @js($modalId) })
                 this.loadAssets()
             },
             selectAsset(id) {
+                if (this.batch) {
+                    const key = String(id)
+                    this.selectedIds = this.selectedIds.includes(key)
+                        ? this.selectedIds.filter((selectedId) => selectedId !== key)
+                        : [...this.selectedIds, key]
+                    this.previewId = key
+                    return
+                }
                 this.selected = this.asset(id) ?? this.selected
                 this.state = Number(id)
                 this.previewId = String(id)
@@ -91,18 +105,46 @@
                 this.state = null
                 this.selected = null
             },
+            async addSelected() {
+                if (! this.batch || ! this.selectedIds.length || this.isApplying) return
+                this.isApplying = true
+                try {
+                    await $wire.callSchemaComponentMethod(@js($galleryTarget), 'appendMedia', [this.selectedIds])
+                    this.selectedIds = []
+                    this.$dispatch('close-modal', { id: @js($modalId) })
+                } finally {
+                    this.isApplying = false
+                }
+            },
             handleUpload(event) {
                 if (event.detail?.pickerId !== @js($modalId)) {
                     return
                 }
 
-                this.state = Number(event.detail.assetId)
-                this.previewId = String(event.detail.assetId)
-                this.$nextTick(() => setTimeout(() => this.openLibrary(), 75))
+                const ids = (event.detail.assetIds ?? []).map(String)
+                if (this.batch) {
+                    this.selectedIds = [...new Set([...this.selectedIds, ...ids])]
+                } else if (ids.length) {
+                    this.state = Number(ids[0])
+                }
+                this.previewId = ids[0] ?? this.previewId
+                this.hasLoaded = false
+                this.$nextTick(() => this.openLibrary())
             },
         }"
         x-on:media-library-uploaded.window="handleUpload($event)"
     >
+        @if($galleryTarget)
+            <div class="iws-gallery-batch-entry">
+                <div>
+                    <strong>{{ Studio::text('gallery_batch_title') }}</strong>
+                    <p>{{ Studio::text('gallery_batch_help') }}</p>
+                </div>
+                <x-filament::button type="button" icon="heroicon-o-photo" x-on:click="openLibrary()" :disabled="$isDisabled()">
+                    {{ Studio::text('gallery_batch_open') }}
+                </x-filament::button>
+            </div>
+        @else
         <div class="iws-media-picker__control">
             <div class="iws-media-picker__current">
                 <template x-if="selectedAsset()">
@@ -141,7 +183,6 @@
                     type="button"
                     icon="heroicon-o-photo"
                     x-on:click="openLibrary()"
-                    wire:target="{{ $getStatePath() }}"
                     :disabled="$isDisabled()"
                 >
                     {{ Studio::text('choose_from_media_library') }}
@@ -154,13 +195,13 @@
                     x-cloak
                     x-show="hasSelection()"
                     x-on:click="clearSelection()"
-                    wire:target="{{ $getStatePath() }}"
                     :disabled="$isDisabled()"
                 >
                     {{ Studio::text('clear_media_selection') }}
                 </x-filament::button>
             </div>
         </div>
+        @endif
 
         <x-filament::modal
             :id="$modalId"
@@ -240,7 +281,7 @@
                                             {{ Studio::text('preview') }}
                                         </button>
                                         <button type="button" class="is-primary" x-on:click="selectAsset(asset.id)">
-                                            {{ Studio::text('select_media') }}
+                                            <span x-text="batch && isSelected(asset.id) ? @js(Studio::text('media_deselect')) : @js(Studio::text('select_media'))"></span>
                                         </button>
                                     </div>
                                 </article>
@@ -274,15 +315,22 @@
                                 <x-filament::button
                                     type="button"
                                     x-on:click="selectAsset(previewAsset().id)"
-                                    wire:target="{{ $getStatePath() }}"
                                     class="iws-media-library__select-button"
                                 >
-                                    {{ Studio::text('select_this_media') }}
+                                    <span x-text="batch && isSelected(previewAsset().id) ? @js(Studio::text('media_deselect')) : @js(Studio::text('select_this_media'))"></span>
                                 </x-filament::button>
                             </section>
                         </template>
                     </aside>
                 </div>
+                @if($galleryTarget)
+                    <div class="iws-media-library__batch-footer">
+                        <span x-text="@js(Studio::text('gallery_batch_selected')).replace(':count', selectedIds.length)"></span>
+                        <x-filament::button type="button" x-on:click="addSelected()" x-bind:disabled="! selectedIds.length || isApplying">
+                            {{ Studio::text('gallery_batch_add') }}
+                        </x-filament::button>
+                    </div>
+                @endif
             </div>
         </x-filament::modal>
     </div>

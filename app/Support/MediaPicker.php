@@ -7,6 +7,7 @@ use App\Jobs\GenerateAssetConversions;
 use App\Models\Asset;
 use App\Rules\MediaUploadSize;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Support\Facades\Storage;
@@ -33,6 +34,15 @@ class MediaPicker
             ]);
     }
 
+    public static function galleryBatch(string $name): MediaLibraryPicker
+    {
+        return MediaLibraryPicker::make($name)
+            ->mediaTypes(['image', 'video'])
+            ->galleryTarget('gallery')
+            ->dehydrated(false)
+            ->columnSpanFull();
+    }
+
     /** @param array<int, string> $types */
     public static function createAsset(array $data, array $types): Asset
     {
@@ -53,7 +63,11 @@ class MediaPicker
             throw ValidationException::withMessages(['upload_path' => MediaUploadLimits::messageForMime($mime)]);
         }
 
-        $nameAr = trim((string) ($data['name_ar'] ?? ''));
+        $originalNames = $data['original_names'] ?? null;
+        $originalName = is_array($originalNames) ? ($originalNames[$path] ?? '') : (string) $originalNames;
+        $fallbackName = trim(pathinfo($originalName ?: basename($path), PATHINFO_FILENAME));
+        $fallbackName = $fallbackName ?: 'Media';
+        $nameAr = trim((string) ($data['name_ar'] ?? '')) ?: trim((string) ($data['name_en'] ?? '')) ?: $fallbackName;
         $nameEn = trim((string) ($data['name_en'] ?? '')) ?: $nameAr;
 
         $asset = Asset::createQuietly([
@@ -86,6 +100,27 @@ class MediaPicker
         return $asset->refresh();
     }
 
+    /** @return array{assets: array<int, Asset>, errors: array<int, string>} */
+    public static function createAssets(array $data, array $types): array
+    {
+        $paths = array_values(array_filter((array) ($data['upload_path'] ?? []), 'is_string'));
+        if (! $paths || count($paths) > 12) {
+            throw ValidationException::withMessages(['upload_path' => Studio::text('media_batch_limit')]);
+        }
+
+        $assets = [];
+        $errors = [];
+        foreach ($paths as $path) {
+            try {
+                $assets[] = self::createAsset([...$data, 'upload_path' => $path], $types);
+            } catch (ValidationException $exception) {
+                $errors[] = collect($exception->errors())->flatten()->filter()->first() ?: Studio::text('media_processing_failed');
+            }
+        }
+
+        return compact('assets', 'errors');
+    }
+
     public static function optionHtml(?Asset $asset): ?string
     {
         if (! $asset) {
@@ -106,13 +141,23 @@ class MediaPicker
     }
 
     /** @param array<int, string> $types */
-    public static function uploadForm(array $types): array
+    public static function uploadForm(array $types, bool $multiple = false): array
     {
+        $upload = self::uploadField('upload_path', $types)
+            ->storeFileNamesIn('original_names')
+            ->required()
+            ->columnSpanFull();
+
+        if ($multiple) {
+            $upload->multiple()->maxFiles(12);
+
+            return [$upload, Hidden::make('original_names')];
+        }
+
         return [
-            self::uploadField('upload_path', $types)
-                ->required()
-                ->columnSpanFull(),
-            TextInput::make('name_ar')->label(Studio::text('media_name_ar'))->required()->maxLength(255),
+            $upload,
+            Hidden::make('original_names'),
+            TextInput::make('name_ar')->label(Studio::text('media_name_ar'))->maxLength(255),
             TextInput::make('name_en')->label(Studio::text('media_name_en'))->maxLength(255),
             Textarea::make('alt_ar')->label(Studio::text('media_alt_ar'))->rows(2)->maxLength(500),
             Textarea::make('alt_en')->label(Studio::text('media_alt_en'))->rows(2)->maxLength(500),
