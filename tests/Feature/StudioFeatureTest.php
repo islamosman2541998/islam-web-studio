@@ -7,6 +7,7 @@ use App\Filament\Pages\MenuBuilder;
 use App\Filament\Pages\StudioSettings;
 use App\Filament\Resources\Assets\AssetResource;
 use App\Filament\Resources\Leads\Pages\ListRecords as ListLeadRecords;
+use App\Filament\Resources\Partners\Pages\CreateRecord as CreatePartnerRecord;
 use App\Filament\Resources\Posts\PostResource;
 use App\Filament\Resources\Projects\Pages\CreateRecord as CreateProjectRecord;
 use App\Filament\Resources\Projects\Pages\EditRecord as EditProjectRecord;
@@ -32,6 +33,7 @@ use App\Models\MenuLocation;
 use App\Models\MethodologyStep;
 use App\Models\Page;
 use App\Models\PageMedia;
+use App\Models\Partner;
 use App\Models\Post;
 use App\Models\PostCategory;
 use App\Models\Project;
@@ -253,6 +255,41 @@ class StudioFeatureTest extends TestCase
         $this->get('/')->assertRedirect();
         $this->get('/sitemap.xml')->assertOk();
         $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /');
+    }
+
+    public function test_partners_are_optional_in_admin_and_render_as_a_localized_home_slider(): void
+    {
+        config(['studio.demo' => false]);
+
+        Livewire::actingAs($this->owner())
+            ->test(CreatePartnerRecord::class)
+            ->fillForm(['title' => ['ar' => '', 'en' => ''], 'image_id' => null, 'url' => null, 'is_active' => true, 'sort_order' => 0])
+            ->call('create')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('partners', 1);
+        $this->get('/ar')->assertOk()->assertDontSee('partners-section', false);
+
+        Partner::create(['title' => ['ar' => 'شريك مصري', 'en' => 'Egyptian partner'], 'url' => 'https://example.com', 'sort_order' => 1, 'is_active' => true]);
+        Storage::fake('public');
+        $image = Asset::factory()->create(['alt' => ['ar' => 'شعار شريك آخر', 'en' => 'Another partner logo']]);
+        $image->addMedia(UploadedFile::fake()->image('partner.png', 300, 150))->toMediaCollection('original', 'public');
+        Partner::create(['image_id' => $image->id, 'sort_order' => 2, 'is_active' => true]);
+        Partner::create(['title' => ['ar' => 'شريك مخفي', 'en' => 'Hidden partner'], 'sort_order' => 2, 'is_active' => false]);
+
+        $this->get('/ar')->assertOk()
+            ->assertSee('شريك مصري')
+            ->assertSee('href="https://example.com"', false)
+            ->assertSee('data-swiper-kind="partners"', false)
+            ->assertSee('data-autoplay="1"', false)
+            ->assertSee('data-drag="1"', false)
+            ->assertSee('alt="شعار شريك آخر"', false)
+            ->assertDontSee('شريك مخفي');
+
+        $this->get('/en')->assertOk()
+            ->assertSee('Egyptian partner')
+            ->assertSee('dir="ltr" data-studio-swiper data-swiper-kind="partners"', false)
+            ->assertDontSee('شريك مخفي');
     }
 
     public function test_demo_mode_blocks_indexing_and_warns_in_settings(): void

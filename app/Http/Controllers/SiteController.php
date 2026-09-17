@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\MethodologyStep;
 use App\Models\Page;
+use App\Models\Partner;
 use App\Models\Post;
 use App\Models\PostCategory;
 use App\Models\Project;
@@ -53,6 +54,7 @@ class SiteController extends Controller
             'steps' => MethodologyStep::published()->orderBy('sort_order')->get(),
             'testimonials' => Testimonial::published()->where('is_demo', false)->orderByDesc('is_featured')->orderBy('sort_order')->limit(6)->get(),
             'posts' => Post::published()->with('featuredMedia', 'postCategory')->latest('published_at')->limit(3)->get(),
+            'partners' => Partner::query()->where('is_active', true)->with('image')->orderBy('sort_order')->orderBy('id')->get()->filter(fn (Partner $partner) => filled($partner->titleText('ar')) || filled($partner->titleText('en')) || ($partner->image?->kind === 'image' && $partner->image->visibility === 'public' && $partner->image->is_active) || filled($partner->url))->values(),
         ]);
     }
 

@@ -38,7 +38,7 @@ class ResourceTable
         $title = $d['title'];
         $locale = app()->getLocale();
         $readonly = $d['readonly'] ?? false;
-        $columns = [ViewColumn::make('mobile_card')->view('filament.tables.mobile-card')->hiddenFrom('md'), TextColumn::make('id')->label('#')->sortable()->visibleFrom('md')->toggleable(isToggledHiddenByDefault: true), TextColumn::make($title)->label(Studio::text('field_'.$title))->getStateUsing(fn ($record) => $record->titleText())->searchable(query: function (Builder $query, string $search) use ($title, $fields) {
+        $columns = [ViewColumn::make('mobile_card')->view('filament.tables.mobile-card')->hiddenFrom('md'), TextColumn::make('id')->label('#')->sortable()->visibleFrom('md')->toggleable(isToggledHiddenByDefault: true), TextColumn::make($title)->label(Studio::text('field_'.$title))->getStateUsing(fn ($record) => $record->titleText() ?: ($module === 'partners' ? ModuleRegistry::label('partners').' #'.$record->id : ''))->searchable(query: function (Builder $query, string $search) use ($title, $fields) {
             $query->where(function (Builder $query) use ($title, $fields, $search) {
                 if ($fields[$title]['translated'] ?? false) {
                     $query->where($title.'->ar', 'like', '%'.$search.'%')->orWhere($title.'->en', 'like', '%'.$search.'%');

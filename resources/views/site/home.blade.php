@@ -107,4 +107,50 @@
 <section class="section process-section"><div class="shell process-grid"><div><span class="eyebrow">03{{ filled($homeSections['process']['label']) ? ' / '.$homeSections['process']['label'] : '' }}</span>@if(filled($homeSections['process']['title']))<h2>{{ $homeSections['process']['title'] }}</h2>@endif @if(filled($homeSections['process']['description']))<p>{{ $homeSections['process']['description'] }}</p>@endif</div>@include('site.partials.process')</div></section>
 <section class="section shell"><div class="section-heading"><span class="eyebrow">04{{ filled($homeSections['testimonials']['label']) ? ' / '.$homeSections['testimonials']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['testimonials']['title']))<h2>{{ $homeSections['testimonials']['title'] }}</h2>@endif @if(filled($homeSections['testimonials']['description']))<p>{{ $homeSections['testimonials']['description'] }}</p>@endif</div></div><div class="swiper reviews-swiper" data-studio-swiper data-swiper-kind="reviews" data-drag="1"><div class="swiper-wrapper">@foreach($testimonials as $review)<div class="swiper-slide"><x-testimonial :review="$review" /></div>@endforeach</div><div class="slider-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></div></section>
 <section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05{{ filled($homeSections['posts']['label']) ? ' / '.$homeSections['posts']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['posts']['title']))<h2>{{ $homeSections['posts']['title'] }}</h2>@endif @if(filled($homeSections['posts']['description']))<p>{{ $homeSections['posts']['description'] }}</p>@endif</div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a></div><div class="posts-grid">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div></div></section>
+@if($partners->isNotEmpty())
+<section class="section partners-section" aria-label="{{ \App\Support\Studio::text('partners_title') }}">
+    <div class="shell">
+        <div class="partners-heading" data-reveal>
+            @if(filled(\App\Support\Studio::text('partners_label')))<span class="eyebrow">{{ \App\Support\Studio::text('partners_label') }}</span>@endif
+            @if(filled(\App\Support\Studio::text('partners_title')))<h2>{{ \App\Support\Studio::text('partners_title') }}</h2>@endif
+            @if(filled(\App\Support\Studio::text('partners_intro')))<p>{{ \App\Support\Studio::text('partners_intro') }}</p>@endif
+        </div>
+        <div class="partners-swiper swiper" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}" data-studio-swiper data-swiper-kind="partners" data-autoplay="1" data-delay="4200" data-drag="1" data-loop="1">
+            <div class="swiper-wrapper">
+                @foreach($partners as $partner)
+                    @php
+                        $partnerTitle = $partner->titleText() ?: $partner->titleText(app()->getLocale() === 'ar' ? 'en' : 'ar');
+                        $partnerImage = $partner->image?->kind === 'image' && $partner->image->visibility === 'public' && $partner->image->is_active ? $partner->image : null;
+                        $partnerUrl = \App\Support\Studio::safeUrl($partner->url);
+                        $partnerName = $partnerTitle ?: ($partnerUrl !== '#' ? (parse_url($partnerUrl, PHP_URL_HOST) ?: \App\Support\Studio::text('partners_label')) : \App\Support\Studio::text('partners_label'));
+                    @endphp
+                    <div class="swiper-slide">
+                        @if($partnerUrl !== '#')<a class="partner-card" href="{{ $partnerUrl }}" target="_blank" rel="noopener noreferrer" aria-label="{{ $partnerName }}">@else<div class="partner-card">@endif
+                            <span class="partner-card-visual">
+                                @if($partnerImage)
+                                    <img src="{{ $partnerImage->imageUrl(640) }}" alt="{{ $partnerImage->text('alt') ?: $partnerName }}" loading="lazy" decoding="async">
+                                @else
+                                    <span class="partner-card-monogram" aria-hidden="true">{{ mb_substr($partnerName, 0, 1) }}</span>
+                                @endif
+                            </span>
+                            @if(filled($partnerTitle) || $partnerUrl !== '#')
+                                <span class="partner-card-footer"><strong dir="auto">{{ $partnerName }}</strong>@if($partnerUrl !== '#')<x-arrow-up-right />@endif</span>
+                            @endif
+                        @if($partnerUrl !== '#')</a>@else</div>@endif
+                    </div>
+                @endforeach
+            </div>
+            @if($partners->count() > 1)
+                <div class="partners-controls">
+                    <div class="swiper-pagination"></div>
+                    <div class="slider-controls">
+                        <button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">{{ app()->getLocale() === 'ar' ? '→' : '←' }}</button>
+                        <button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">{{ app()->getLocale() === 'ar' ? '←' : '→' }}</button>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+</section>
+@endif
 @endsection

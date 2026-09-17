@@ -65,6 +65,14 @@ class TranslationRegistry
                             'posts_intro' => self::field('الوصف', 'Description', 'textarea'),
                         ],
                     ],
+                    'partners' => [
+                        'label' => ['ar' => 'سكشن الشركاء', 'en' => 'Partners section'],
+                        'fields' => [
+                            'partners_label' => self::field('النص الصغير أعلى العنوان', 'Eyebrow text'),
+                            'partners_title' => self::field('العنوان', 'Title'),
+                            'partners_intro' => self::field('الوصف', 'Description', 'textarea'),
+                        ],
+                    ],
                 ],
             ],
             'inner' => [

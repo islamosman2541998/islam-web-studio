@@ -36,6 +36,7 @@ abstract class StudioResource extends Resource
             'menu_locations' => 'heroicon-o-map-pin',
             'menu_items' => 'heroicon-o-bars-3',
             'sliders' => 'heroicon-o-rectangle-stack',
+            'partners' => 'heroicon-o-building-office-2',
             'slides' => 'heroicon-o-play-circle',
             'post_categories' => 'heroicon-o-folder-open',
             'posts' => 'heroicon-o-newspaper',
