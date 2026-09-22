@@ -6,12 +6,10 @@ use App\Filament\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\LeadPipeline;
 use App\Filament\Pages\MenuBuilder;
+use App\Filament\Pages\MetaAdsAnalytics;
 use App\Filament\Pages\StudioSettings;
 use App\Filament\Widgets\ContentStatusChart;
 use App\Filament\Widgets\LeadActivityChart;
-use App\Filament\Widgets\MetaAdPerformanceTable;
-use App\Filament\Widgets\MetaAdsOverview;
-use App\Filament\Widgets\MetaAdsTrendChart;
 use App\Filament\Widgets\StudioStats;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -46,8 +44,8 @@ class AdminPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/admin/theme.css')->darkMode()->sidebarCollapsibleOnDesktop(fn () => Studio::setting('dashboard.compact_sidebar', true))->spa()
             ->databaseNotifications()->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->pages([Dashboard::class, StudioSettings::class, MenuBuilder::class, LeadPipeline::class])
-            ->widgets([StudioStats::class, LeadActivityChart::class, ContentStatusChart::class, MetaAdsOverview::class, MetaAdsTrendChart::class, MetaAdPerformanceTable::class])
+            ->pages([Dashboard::class, StudioSettings::class, MenuBuilder::class, LeadPipeline::class, MetaAdsAnalytics::class])
+            ->widgets([StudioStats::class, LeadActivityChart::class, ContentStatusChart::class])
             ->renderHook(PanelsRenderHook::HEAD_END, fn () => view('filament.tokens'))
             ->renderHook(PanelsRenderHook::BODY_END, fn () => view('filament.scripts'))
             ->renderHook(PanelsRenderHook::TOPBAR_END, fn () => view('filament.locale'))

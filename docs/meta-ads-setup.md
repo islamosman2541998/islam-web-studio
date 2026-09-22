@@ -11,6 +11,7 @@ META_GRAPH_VERSION=v26.0
 META_APP_ID=
 META_APP_SECRET=
 META_ACCESS_TOKEN=
+META_PAGE_ACCESS_TOKEN=
 META_WEBHOOK_VERIFY_TOKEN=
 META_AD_ACCOUNT_ID=
 META_PAGE_ID=
@@ -20,12 +21,13 @@ META_AD_CURRENCY=EGP
 - استخدم رقم الحساب الإعلاني في `META_AD_ACCOUNT_ID`، سواء مع `act_` أو بدونه.
 - أنشئ قيمة عشوائية طويلة لـ `META_WEBHOOK_VERIFY_TOKEN` واستخدم القيمة نفسها داخل إعداد Webhook في Meta.
 - يفضّل استخدام System User access token طويل المدة مع صلاحيات الأصول المطلوبة بدلاً من توكن مستخدم قصير المدة.
+- استخدم `META_ACCESS_TOKEN` لقراءة الحساب الإعلاني، و`META_PAGE_ACCESS_TOKEN` الخاص بالصفحة لاستقبال وقراءة بيانات الليدز. إذا تُرك توكن الصفحة فارغاً سيحاول المشروع استخدام التوكن العام للتوافق مع الإعدادات القديمة.
 
 ## 2. إعداد تطبيق Meta
 
 1. أنشئ تطبيقاً أو استخدم تطبيق Business موجوداً داخل Meta for Developers.
 2. اربط التطبيق بالـ Business Portfolio والصفحة والحساب الإعلاني الصحيحين.
-3. امنح التوكن صلاحيات قراءة الإعلانات واسترجاع الليدز، ومنها `ads_read` و`leads_retrieval`، مع صلاحيات الصفحة التي يطلبها إعداد التطبيق.
+3. امنح توكن الإعلانات صلاحية `ads_read`، وامنح مستخدم النظام/الصفحة صلاحية الوصول للصفحة و`leads_retrieval` مع `pages_show_list` و`pages_read_engagement` والصلاحيات التي يطلبها إعداد التطبيق.
 4. أضف عنوان الاستقبال التالي إلى Webhooks:
 
 ```text

@@ -40,12 +40,19 @@ class LeadPipeline extends Page
     public function move(int $id, string $status): void
     {
         abort_unless(auth()->user()?->can('leads.update') && in_array($status, ['new', 'contacted', 'quoted', 'won', 'lost']), 403);
-        Lead::findOrFail($id)->update(['status' => $status]);
+        Lead::query()->whereKey($id)->where(function ($query): void {
+            $query->whereNull('source')->orWhere('source', '!=', 'meta');
+        })->firstOrFail()->update(['status' => $status]);
         Notification::make()->success()->title(Studio::text('updated'))->send();
     }
 
     public function leads(string $status)
     {
-        return Lead::where('status', $status)->when($this->search, fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))->with('service')->latest()->limit(30)->get();
+        return Lead::where('status', $status)
+            ->where(function ($query): void {
+                $query->whereNull('source')->orWhere('source', '!=', 'meta');
+            })
+            ->when($this->search, fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
+            ->with('service')->latest()->limit(30)->get();
     }
 }

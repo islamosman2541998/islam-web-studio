@@ -2,10 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\MetaAdsAnalytics;
+use App\Filament\Resources\Leads\LeadResource;
+use App\Filament\Resources\MetaLeads\MetaLeadResource;
 use App\Filament\Widgets\MetaAdPerformanceTable;
+use App\Filament\Widgets\MetaAdsDecisionOverview;
+use App\Filament\Widgets\MetaAdsEfficiencyChart;
 use App\Filament\Widgets\MetaAdsOverview;
 use App\Filament\Widgets\MetaAdsTrendChart;
+use App\Filament\Widgets\MetaCampaignPerformanceTable;
 use App\Jobs\ImportMetaLead;
+use App\Models\Lead;
 use App\Models\MetaAdInsight;
 use App\Models\User;
 use App\Support\MetaAds;
@@ -111,6 +118,57 @@ class MetaAdsIntegrationTest extends TestCase
         $this->assertStringContainsString('Needed Service: Online store', $first->message);
     }
 
+    public function test_page_access_token_is_preferred_when_fetching_lead_details(): void
+    {
+        config(['services.meta.page_access_token' => 'page-token']);
+        Http::fake([
+            'graph.facebook.com/v26.0/lead-page-token*' => Http::response([
+                'id' => 'lead-page-token',
+                'field_data' => [
+                    ['name' => 'full_name', 'values' => ['Page Lead']],
+                ],
+            ]),
+        ]);
+
+        app(MetaAds::class)->importLead('lead-page-token');
+
+        Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer page-token'));
+        $this->assertDatabaseHas('leads', ['meta_lead_id' => 'lead-page-token']);
+    }
+
+    public function test_leads_can_be_synchronized_from_page_forms_without_waiting_for_a_webhook(): void
+    {
+        config([
+            'services.meta.page_id' => 'page-1',
+            'services.meta.page_access_token' => 'page-token',
+        ]);
+        Http::fake([
+            'graph.facebook.com/v26.0/page-1/leadgen_forms*' => Http::response([
+                'data' => [['id' => 'form-1']],
+            ]),
+            'graph.facebook.com/v26.0/form-1/leads*' => Http::response([
+                'data' => [['id' => 'lead-sync-1', 'created_time' => now()->toIso8601String()]],
+            ]),
+            'graph.facebook.com/v26.0/lead-sync-1*' => Http::response([
+                'id' => 'lead-sync-1',
+                'created_time' => now()->toIso8601String(),
+                'form_id' => 'form-1',
+                'field_data' => [
+                    ['name' => 'full_name', 'values' => ['Synced Lead']],
+                    ['name' => 'phone_number', 'values' => ['+201000000000']],
+                ],
+            ]),
+        ]);
+
+        $this->assertSame(1, app(MetaAds::class)->syncLeads());
+        $this->assertDatabaseHas('leads', [
+            'meta_lead_id' => 'lead-sync-1',
+            'meta_page_id' => 'page-1',
+            'meta_form_id' => 'form-1',
+            'name' => 'Synced Lead',
+        ]);
+    }
+
     public function test_ad_insights_are_synchronized_and_updated_idempotently(): void
     {
         Http::fake([
@@ -182,6 +240,18 @@ class MetaAdsIntegrationTest extends TestCase
         Livewire::actingAs($user)->test(MetaAdsTrendChart::class)
             ->assertSee(Studio::text('meta_ads_trend'));
 
+        Livewire::actingAs($user)->test(MetaAdsDecisionOverview::class)
+            ->assertSee(Studio::text('meta_decision_metrics'))
+            ->assertSee('4.58%')
+            ->assertSee('50.00 EGP');
+
+        Livewire::actingAs($user)->test(MetaAdsEfficiencyChart::class)
+            ->assertSee(Studio::text('meta_efficiency_trend'));
+
+        Livewire::actingAs($user)->test(MetaCampaignPerformanceTable::class)
+            ->assertSee('Website leads')
+            ->assertSee('50.00 EGP');
+
         Livewire::actingAs($user)->test(MetaAdPerformanceTable::class)
             ->assertSee('Website leads')
             ->assertSee('Website creative A')
@@ -208,5 +278,29 @@ class MetaAdsIntegrationTest extends TestCase
 
         Livewire::actingAs($user)->test(MetaAdPerformanceTable::class)
             ->assertSee(Studio::text('meta_ads_per_ad'));
+    }
+
+    public function test_meta_has_a_separate_analytics_page_and_leads_are_isolated_from_site_enquiries(): void
+    {
+        Permission::findOrCreate('leads.view', 'web');
+        Permission::findOrCreate('dashboard.view', 'web');
+        $user = User::factory()->create(['is_active' => true]);
+        $user->givePermissionTo(['leads.view', 'dashboard.view']);
+        Lead::factory()->create(['source' => 'form']);
+        Lead::factory()->create(['source' => 'meta', 'meta_lead_id' => 'isolated-meta-lead']);
+
+        $this->actingAs($user)
+            ->get(MetaAdsAnalytics::getUrl())
+            ->assertOk()
+            ->assertSee(Studio::text('meta_analytics'))
+            ->assertSee(Studio::text('analysis_period'));
+
+        $this->actingAs($user)
+            ->get(MetaLeadResource::getUrl('index'))
+            ->assertOk()
+            ->assertSee(Studio::text('meta_leads'));
+
+        $this->assertSame(1, LeadResource::getEloquentQuery()->count());
+        $this->assertSame(1, MetaLeadResource::getEloquentQuery()->count());
     }
 }

@@ -54,12 +54,15 @@ class StudioStats extends StatsOverviewWidget
         }
 
         if (auth()->user()?->can('leads.view')) {
-            $new = Lead::query()->where('status', 'new')->count();
-            $stats[] = Stat::make(Studio::text('leads'), Lead::count())
+            $leadQuery = Lead::query()->where(function ($query): void {
+                $query->whereNull('source')->orWhere('source', '!=', 'meta');
+            });
+            $new = (clone $leadQuery)->where('status', 'new')->count();
+            $stats[] = Stat::make(Studio::text('leads'), (clone $leadQuery)->count())
                 ->description(Studio::text('dashboard_new_waiting', ['count' => $new]))
                 ->descriptionIcon($new > 0 ? 'heroicon-m-bell-alert' : 'heroicon-m-check-circle')
                 ->icon('heroicon-o-inbox-arrow-down')
-                ->chart($this->dailyCounts(Lead::class))
+                ->chart($this->dailySiteLeadCounts())
                 ->chartColor('warning')
                 ->color('warning')
                 ->url(LeadResource::getUrl('index'))
@@ -92,6 +95,23 @@ class StudioStats extends StatsOverviewWidget
             ->where('created_at', '>=', $start)
             ->get(['created_at'])
             ->countBy(fn (Model $record): string => $record->created_at->toDateString());
+
+        return collect(range(0, 6))
+            ->map(fn (int $day): int => (int) $counts->get($start->copy()->addDays($day)->toDateString(), 0))
+            ->all();
+    }
+
+    /** @return array<int, int> */
+    private function dailySiteLeadCounts(): array
+    {
+        $start = today()->subDays(6);
+        $counts = Lead::query()
+            ->where(function ($query): void {
+                $query->whereNull('source')->orWhere('source', '!=', 'meta');
+            })
+            ->where('created_at', '>=', $start)
+            ->get(['created_at'])
+            ->countBy(fn (Lead $lead): string => $lead->created_at->toDateString());
 
         return collect(range(0, 6))
             ->map(fn (int $day): int => (int) $counts->get($start->copy()->addDays($day)->toDateString(), 0))

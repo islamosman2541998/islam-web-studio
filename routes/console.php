@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('meta-ads:sync --days=7')->hourly()->withoutOverlapping();
+Schedule::command('meta-ads:sync-leads --days=90')->everyFiveMinutes()->withoutOverlapping();

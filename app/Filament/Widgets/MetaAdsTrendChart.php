@@ -2,15 +2,18 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\HasMetaDateRange;
 use App\Models\MetaAdInsight;
 use App\Support\Studio;
 use Filament\Widgets\ChartWidget;
 
 class MetaAdsTrendChart extends ChartWidget
 {
-    protected static ?int $sort = 5;
+    use HasMetaDateRange;
 
-    protected int|string|array $columnSpan = 'full';
+    protected static ?int $sort = 3;
+
+    protected int|string|array $columnSpan = 1;
 
     protected ?string $maxHeight = '320px';
 
@@ -28,9 +31,9 @@ class MetaAdsTrendChart extends ChartWidget
 
     protected function getData(): array
     {
-        $days = collect(range(13, 0))->map(fn (int $offset) => today()->subDays($offset));
-        $rows = MetaAdInsight::query()
-            ->whereDate('date', '>=', $days->first())
+        $days = collect(range(0, (int) min(89, $this->startDate()->diffInDays($this->endDate()))))
+            ->map(fn (int $offset) => $this->startDate()->copy()->addDays($offset));
+        $rows = $this->inPeriod(MetaAdInsight::query())
             ->selectRaw('date, SUM(spend) as spend, SUM(leads) as leads')
             ->groupBy('date')->get()->keyBy(fn (MetaAdInsight $row) => $row->date->toDateString());
 

@@ -35,6 +35,9 @@ class LeadActivityChart extends ChartWidget
     {
         $days = collect(range(13, 0))->map(fn (int $offset) => today()->subDays($offset));
         $counts = Lead::query()
+            ->where(function ($query): void {
+                $query->whereNull('source')->orWhere('source', '!=', 'meta');
+            })
             ->where('created_at', '>=', $days->first()->copy()->startOfDay())
             ->get(['created_at'])
             ->countBy(fn (Lead $lead): string => $lead->created_at->toDateString());

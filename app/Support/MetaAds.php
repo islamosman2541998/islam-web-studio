@@ -6,9 +6,11 @@ use App\Models\Lead;
 use App\Models\MetaAdInsight;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 class MetaAds
 {
@@ -19,9 +21,15 @@ class MetaAds
 
     public function webhookConfigured(): bool
     {
-        return filled(config('services.meta.access_token'))
+        return filled(config('services.meta.page_access_token') ?: config('services.meta.access_token'))
             && filled(config('services.meta.app_secret'))
             && filled(config('services.meta.verify_token'));
+    }
+
+    public function leadsConfigured(): bool
+    {
+        return filled(config('services.meta.page_id'))
+            && filled(config('services.meta.page_access_token') ?: config('services.meta.access_token'));
     }
 
     public function verifySignature(string $payload, ?string $signature): bool
@@ -37,7 +45,7 @@ class MetaAds
 
     public function fetchLead(string $leadId): array
     {
-        return $this->request()->get($this->url($leadId), [
+        return $this->leadRequest()->get($this->url($leadId), [
             'fields' => implode(',', [
                 'id', 'created_time', 'ad_id', 'ad_name', 'adset_id', 'adset_name',
                 'campaign_id', 'campaign_name', 'form_id', 'platform', 'field_data',
@@ -148,6 +156,66 @@ class MetaAds
         return $synced;
     }
 
+    public function syncLeads(int $days = 90): int
+    {
+        if (! $this->leadsConfigured()) {
+            throw new RuntimeException('Meta Page credentials are incomplete.');
+        }
+
+        $cutoff = now()->subDays(max(1, $days));
+        $pageId = (string) config('services.meta.page_id');
+        $formsUrl = $this->url($pageId.'/leadgen_forms');
+        $formsParams = ['fields' => 'id', 'limit' => 100];
+        $synced = 0;
+
+        do {
+            $formsResponse = $this->leadRequest()->get($formsUrl, $formsParams)->throw()->json();
+
+            foreach ($formsResponse['data'] ?? [] as $form) {
+                $formId = (string) ($form['id'] ?? '');
+                if ($formId === '') {
+                    continue;
+                }
+
+                $leadsUrl = $this->url($formId.'/leads');
+                $leadsParams = ['fields' => 'id,created_time', 'limit' => 100];
+                $reachedCutoff = false;
+
+                do {
+                    $leadsResponse = $this->leadRequest()->get($leadsUrl, $leadsParams)->throw()->json();
+
+                    foreach ($leadsResponse['data'] ?? [] as $lead) {
+                        $createdAt = filled($lead['created_time'] ?? null) ? Carbon::parse($lead['created_time']) : null;
+                        if ($createdAt?->lt($cutoff)) {
+                            $reachedCutoff = true;
+                            break;
+                        }
+
+                        $leadId = (string) ($lead['id'] ?? '');
+                        if ($leadId === '') {
+                            continue;
+                        }
+
+                        try {
+                            $this->importLead($leadId, ['page_id' => $pageId, 'form_id' => $formId]);
+                            $synced++;
+                        } catch (Throwable $error) {
+                            report($error);
+                        }
+                    }
+
+                    $leadsUrl = $reachedCutoff ? null : data_get($leadsResponse, 'paging.next');
+                    $leadsParams = [];
+                } while (filled($leadsUrl));
+            }
+
+            $formsUrl = data_get($formsResponse, 'paging.next');
+            $formsParams = [];
+        } while (filled($formsUrl));
+
+        return $synced;
+    }
+
     private function actionValue(array $actions): float
     {
         $priorities = ['lead', 'onsite_conversion.lead_grouped', 'onsite_conversion.lead_grouped_website', 'offsite_conversion.fb_pixel_lead'];
@@ -168,6 +236,16 @@ class MetaAds
         $token = (string) config('services.meta.access_token');
         if ($token === '') {
             throw new RuntimeException('Meta access token is missing.');
+        }
+
+        return Http::withToken($token)->acceptJson()->timeout(25)->retry(2, 500, throw: false);
+    }
+
+    private function leadRequest(): PendingRequest
+    {
+        $token = (string) (config('services.meta.page_access_token') ?: config('services.meta.access_token'));
+        if ($token === '') {
+            throw new RuntimeException('Meta page access token is missing.');
         }
 
         return Http::withToken($token)->acceptJson()->timeout(25)->retry(2, 500, throw: false);

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Widgets\Concerns\HasMetaDateRange;
 use App\Models\Lead;
 use App\Models\MetaAdInsight;
 use App\Support\MetaAds;
@@ -12,7 +13,9 @@ use Illuminate\Support\Carbon;
 
 class MetaAdsOverview extends StatsOverviewWidget
 {
-    protected static ?int $sort = 4;
+    use HasMetaDateRange;
+
+    protected static ?int $sort = 1;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -43,10 +46,10 @@ class MetaAdsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $query = MetaAdInsight::query()->whereDate('date', '>=', today()->subDays(6));
+        $query = $this->inPeriod(MetaAdInsight::query());
         $spend = (float) (clone $query)->sum('spend');
         $reportedLeads = (int) (clone $query)->sum('leads');
-        $receivedLeads = Lead::query()->where('source', 'meta')->where('created_at', '>=', today()->subDays(6))->count();
+        $receivedLeads = $this->inPeriod(Lead::query()->where('source', 'meta'), 'meta_created_at')->count();
         $currency = MetaAdInsight::query()->latest('date')->value('currency') ?: 'EGP';
 
         return [
