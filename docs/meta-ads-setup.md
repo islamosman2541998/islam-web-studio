@@ -43,8 +43,13 @@ https://islam-web-studio.com/webhooks/meta/lead-ads
 ```bash
 php artisan optimize:clear
 php artisan migrate --force
-php artisan meta-ads:sync --days=30
+php artisan meta-ads:sync --days=90
+php artisan meta-ads:sync-leads --days=90
 ```
+
+تعديل ملف `.env` وحده لا يبدأ المزامنة. يجب تنفيذ الأوامر السابقة مرة واحدة على كل سيرفر بعد رفع التحديث. تأكد أيضاً أن `APP_URL` يبدأ بـ `https://` في بيئة الإنتاج، وأن كل Token مكتوب في سطر واحد بدون مسافات قبله أو بعده.
+
+زر **تحديث بيانات Meta** داخل صفحة التحليلات يشغّل اتصالاً مباشرًا لا يعتمد على الـ Queue أو قفل الكاش، ويعرض بعد الانتهاء عدد سجلات الأداء والليدز التي تمت مزامنتها. إذا فشل اتصال Meta فستظهر رسالة الخطأ الحقيقية داخل الصفحة.
 
 يجب تشغيل Laravel Scheduler كل دقيقة على الاستضافة:
 

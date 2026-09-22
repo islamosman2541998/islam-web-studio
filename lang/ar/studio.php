@@ -460,6 +460,7 @@ return [
     'meta_ad' => 'الإعلان',
     'meta_ads_sync_now' => 'تحديث بيانات Meta',
     'meta_ads_sync_complete' => 'تم تحديث بيانات إعلانات Meta',
+    'meta_ads_sync_summary' => 'تمت مزامنة :insights سجل أداء و:leads ليد.',
     'meta_ads_sync_failed' => 'تعذر تحديث بيانات Meta',
     'meta_decision_metrics' => 'مؤشرات تساعدك على اتخاذ القرار',
     'meta_decision_metrics_description' => 'مؤشرات الكفاءة والتحويل المحسوبة من بيانات الفترة المختارة.',

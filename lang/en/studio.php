@@ -460,6 +460,7 @@ return [
     'meta_ad' => 'Ad',
     'meta_ads_sync_now' => 'Sync Meta Ads',
     'meta_ads_sync_complete' => 'Meta Ads data synchronized',
+    'meta_ads_sync_summary' => 'Synchronized :insights performance records and :leads leads.',
     'meta_ads_sync_failed' => 'Meta Ads sync failed',
     'meta_decision_metrics' => 'Decision metrics',
     'meta_decision_metrics_description' => 'Efficiency and conversion metrics calculated for the selected period.',

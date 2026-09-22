@@ -8,7 +8,6 @@ use App\Filament\Widgets\MetaAdsEfficiencyChart;
 use App\Filament\Widgets\MetaAdsOverview;
 use App\Filament\Widgets\MetaAdsTrendChart;
 use App\Filament\Widgets\MetaCampaignPerformanceTable;
-use App\Jobs\SyncMetaAdsInsights;
 use App\Support\MetaAds;
 use App\Support\Studio;
 use Filament\Actions\Action;
@@ -94,9 +93,20 @@ class MetaAdsAnalytics extends Dashboard
                 ->tooltip(fn (): ?string => app(MetaAds::class)->configured() ? null : Studio::text('meta_ads_not_configured'))
                 ->action(function (): void {
                     try {
-                        SyncMetaAdsInsights::dispatchSync(90);
-                        app(MetaAds::class)->syncLeads(90);
-                        Notification::make()->success()->title(Studio::text('meta_ads_sync_complete'))->send();
+                        $meta = app(MetaAds::class);
+                        $insights = $meta->syncInsights(90);
+                        $leads = $meta->leadsConfigured() ? $meta->syncLeads(90) : 0;
+
+                        Notification::make()
+                            ->success()
+                            ->title(Studio::text('meta_ads_sync_complete'))
+                            ->body(Studio::text('meta_ads_sync_summary', [
+                                'insights' => $insights,
+                                'leads' => $leads,
+                            ]))
+                            ->send();
+
+                        $this->redirect(static::getUrl());
                     } catch (Throwable $error) {
                         report($error);
                         Notification::make()->danger()->title(Studio::text('meta_ads_sync_failed'))->body($error->getMessage())->persistent()->send();
