@@ -3,6 +3,7 @@
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MetaLeadWebhookController;
 use App\Http\Controllers\SiteController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,8 @@ Route::get('/exports/{export}/download', ExportController::class)->middleware('a
 Route::get('/private-assets/{asset}', AssetController::class)->middleware('auth')->name('assets.private');
 Route::get('/sitemap.xml', [SiteController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [SiteController::class, 'robots'])->name('robots');
+Route::get('/webhooks/meta/lead-ads', [MetaLeadWebhookController::class, 'verify'])->name('webhooks.meta.verify');
+Route::post('/webhooks/meta/lead-ads', [MetaLeadWebhookController::class, 'handle'])->name('webhooks.meta.handle');
 Route::get('/{locale}/admin/{path?}', function (Request $request, string $locale, ?string $path = null) {
     $request->session()->put('studio_locale', $locale);
 

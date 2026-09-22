@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'meta' => [
+        'version' => env('META_GRAPH_VERSION', 'v26.0'),
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'access_token' => env('META_ACCESS_TOKEN'),
+        'verify_token' => env('META_WEBHOOK_VERIFY_TOKEN'),
+        'ad_account_id' => env('META_AD_ACCOUNT_ID'),
+        'page_id' => env('META_PAGE_ID'),
+        'currency' => env('META_AD_CURRENCY', 'EGP'),
+    ],
+
 ];

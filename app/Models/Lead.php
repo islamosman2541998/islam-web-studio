@@ -11,6 +11,11 @@ class Lead extends StudioRecord
 
     public array $translatable = [];
 
+    protected function casts(): array
+    {
+        return [...parent::casts(), 'meta_payload' => 'array', 'meta_created_at' => 'datetime'];
+    }
+
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class, 'service_id');
