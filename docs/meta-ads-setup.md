@@ -23,6 +23,12 @@ META_AD_CURRENCY=EGP
 - يفضّل استخدام System User access token طويل المدة مع صلاحيات الأصول المطلوبة بدلاً من توكن مستخدم قصير المدة.
 - استخدم `META_ACCESS_TOKEN` لقراءة الحساب الإعلاني، و`META_PAGE_ACCESS_TOKEN` الخاص بالصفحة لاستقبال وقراءة بيانات الليدز. إذا تُرك توكن الصفحة فارغاً سيحاول المشروع استخدام التوكن العام للتوافق مع الإعدادات القديمة.
 
+### توكن الإنتاج الذي لا ينتهي سريعاً
+
+لا تستخدم توكن Graph API Explorer القصير على السيرفر؛ قد يعمل ساعات ثم يعيد خطأ `401 Session has expired`. من **Meta Business Settings → Users → System Users** أنشئ System User واربط به الصفحة والحساب الإعلاني والتطبيق، ثم أنشئ Token واختر **Never expires** إن كان الخيار متاحاً. امنحه `ads_read` و`leads_retrieval` و`pages_show_list` و`pages_read_engagement` و`pages_manage_metadata` حسب الأصول المربوطة.
+
+ضع System User Token في `META_ACCESS_TOKEN`. يمكن وضع القيمة نفسها مؤقتاً في `META_PAGE_ACCESS_TOKEN`؛ سيستخرج المشروع Page Access Token الصحيح تلقائياً من الصفحة المربوطة قبل جلب الليدز. ويمكن أيضاً وضع Page Access Token صريح في `META_PAGE_ACCESS_TOKEN`. افحص System User Token بأداة **Access Token Debugger** وتأكد أن خانة الانتهاء تعرض `Never` قبل وضعه على السيرفر.
+
 ## 2. إعداد تطبيق Meta
 
 1. أنشئ تطبيقاً أو استخدم تطبيق Business موجوداً داخل Meta for Developers.

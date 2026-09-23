@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Lead;
 use App\Models\MetaAdInsight;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +15,41 @@ use Throwable;
 
 class MetaAds
 {
+    private ?string $resolvedPageAccessToken = null;
+
+    public function readableError(Throwable $error): string
+    {
+        if ($error instanceof RequestException) {
+            $payload = $error->response->json();
+            $code = (int) data_get($payload, 'error.code');
+            $message = (string) data_get($payload, 'error.message');
+
+            $normalizedMessage = strtolower($message);
+
+            if (str_contains($normalizedMessage, 'must be called with a page access token')) {
+                return Studio::text('meta_page_token_required');
+            }
+
+            if (str_contains($normalizedMessage, 'expired') || (int) data_get($payload, 'error.error_subcode') === 463) {
+                return Studio::text('meta_token_expired');
+            }
+
+            if ($code === 190 || str_contains($normalizedMessage, 'access token')) {
+                return Studio::text('meta_token_invalid');
+            }
+
+            if (in_array($code, [10, 200, 294], true)) {
+                return Studio::text('meta_token_permissions');
+            }
+
+            if ($message !== '') {
+                return $message;
+            }
+        }
+
+        return $error->getMessage();
+    }
+
     public function configured(): bool
     {
         return filled(config('services.meta.access_token')) && filled(config('services.meta.ad_account_id'));
@@ -243,12 +279,34 @@ class MetaAds
 
     private function leadRequest(): PendingRequest
     {
-        $token = (string) (config('services.meta.page_access_token') ?: config('services.meta.access_token'));
+        $token = $this->pageAccessToken();
         if ($token === '') {
             throw new RuntimeException('Meta page access token is missing.');
         }
 
         return Http::withToken($token)->acceptJson()->timeout(25)->retry(2, 500, throw: false);
+    }
+
+    private function pageAccessToken(): string
+    {
+        if ($this->resolvedPageAccessToken !== null) {
+            return $this->resolvedPageAccessToken;
+        }
+
+        $configured = (string) config('services.meta.page_access_token');
+        $accessToken = (string) config('services.meta.access_token');
+        $pageId = (string) config('services.meta.page_id');
+
+        if ($accessToken !== '' && $pageId !== '' && ($configured === '' || hash_equals($accessToken, $configured))) {
+            $response = $this->request()->get($this->url($pageId), ['fields' => 'access_token']);
+            $derived = (string) $response->json('access_token');
+
+            if ($response->successful() && $derived !== '') {
+                return $this->resolvedPageAccessToken = $derived;
+            }
+        }
+
+        return $this->resolvedPageAccessToken = ($configured ?: $accessToken);
     }
 
     private function url(string $path): string

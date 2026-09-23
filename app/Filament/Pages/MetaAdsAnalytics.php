@@ -92,25 +92,58 @@ class MetaAdsAnalytics extends Dashboard
                 ->disabled(fn (): bool => ! app(MetaAds::class)->configured())
                 ->tooltip(fn (): ?string => app(MetaAds::class)->configured() ? null : Studio::text('meta_ads_not_configured'))
                 ->action(function (): void {
+                    $meta = app(MetaAds::class);
+                    $insights = null;
+                    $leads = null;
+                    $errors = [];
+
                     try {
-                        $meta = app(MetaAds::class);
                         $insights = $meta->syncInsights(90);
-                        $leads = $meta->leadsConfigured() ? $meta->syncLeads(90) : 0;
+                    } catch (Throwable $error) {
+                        report($error);
+                        $errors[] = Studio::text('meta_ads_insights_sync_failed').': '.$meta->readableError($error);
+                    }
+
+                    if ($meta->leadsConfigured()) {
+                        try {
+                            $leads = $meta->syncLeads(90);
+                        } catch (Throwable $error) {
+                            report($error);
+                            $errors[] = Studio::text('meta_ads_leads_sync_failed').': '.$meta->readableError($error);
+                        }
+                    } else {
+                        $leads = 0;
+                    }
+
+                    $summary = Studio::text('meta_ads_sync_summary', [
+                        'insights' => $insights ?? 0,
+                        'leads' => $leads ?? 0,
+                    ]);
+
+                    if ($errors === []) {
 
                         Notification::make()
                             ->success()
                             ->title(Studio::text('meta_ads_sync_complete'))
-                            ->body(Studio::text('meta_ads_sync_summary', [
-                                'insights' => $insights,
-                                'leads' => $leads,
-                            ]))
+                            ->body($summary)
                             ->send();
-
-                        $this->redirect(static::getUrl());
-                    } catch (Throwable $error) {
-                        report($error);
-                        Notification::make()->danger()->title(Studio::text('meta_ads_sync_failed'))->body($error->getMessage())->persistent()->send();
+                    } elseif ($insights !== null || $leads !== null) {
+                        Notification::make()
+                            ->warning()
+                            ->title(Studio::text('meta_ads_sync_partial'))
+                            ->body($summary."\n\n".implode("\n", $errors))
+                            ->persistent()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->danger()
+                            ->title(Studio::text('meta_ads_sync_failed'))
+                            ->body(implode("\n", $errors))
+                            ->persistent()
+                            ->send();
                     }
+
+                    $this->redirect(static::getUrl());
                 }),
         ];
     }

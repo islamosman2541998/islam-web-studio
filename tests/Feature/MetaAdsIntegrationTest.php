@@ -136,6 +136,51 @@ class MetaAdsIntegrationTest extends TestCase
         $this->assertDatabaseHas('leads', ['meta_lead_id' => 'lead-page-token']);
     }
 
+    public function test_expired_meta_token_is_reported_with_a_safe_actionable_message(): void
+    {
+        config([
+            'services.meta.page_id' => 'page-1',
+            'services.meta.page_access_token' => 'expired-page-token',
+        ]);
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'error' => [
+                    'message' => 'Error validating access token: Session has expired.',
+                    'type' => 'OAuthException',
+                    'code' => 190,
+                ],
+            ], 401),
+        ]);
+
+        $meta = app(MetaAds::class);
+
+        try {
+            $meta->syncLeads(90);
+            $this->fail('The expired token request should fail.');
+        } catch (\Throwable $error) {
+            $this->assertSame(Studio::text('meta_token_expired'), $meta->readableError($error));
+            $this->assertStringNotContainsString('expired-page-token', $meta->readableError($error));
+        }
+    }
+
+    public function test_page_token_is_derived_automatically_from_the_system_user_token(): void
+    {
+        config([
+            'services.meta.page_id' => 'page-1',
+            'services.meta.access_token' => 'system-user-token',
+            'services.meta.page_access_token' => 'system-user-token',
+        ]);
+        Http::fake([
+            'graph.facebook.com/v26.0/page-1?*' => Http::response(['access_token' => 'derived-page-token']),
+            'graph.facebook.com/v26.0/page-1/leadgen_forms*' => Http::response(['data' => []]),
+        ]);
+
+        $this->assertSame(0, app(MetaAds::class)->syncLeads(1));
+
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/page-1/leadgen_forms')
+            && $request->hasHeader('Authorization', 'Bearer derived-page-token'));
+    }
+
     public function test_leads_can_be_synchronized_from_page_forms_without_waiting_for_a_webhook(): void
     {
         config([
