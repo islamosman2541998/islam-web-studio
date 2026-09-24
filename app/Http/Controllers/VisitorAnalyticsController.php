@@ -60,18 +60,18 @@ class VisitorAnalyticsController extends Controller
                 ['public_id' => $data['session_id']],
                 [
                     'visitor_hash' => hash_hmac('sha256', $data['visitor_id'], (string) config('app.key')),
-                    'ip_hash' => $request->ip() ? hash_hmac('sha256', $request->ip(), (string) config('app.key')) : null,
+                    'ip_hash' => null,
                     'country_code' => $this->country($request),
                     'device_type' => $agent['device'],
                     'browser' => $agent['browser'],
                     'operating_system' => $agent['os'],
                     'language' => $data['language'] ?? null,
-                    'timezone' => $data['timezone'] ?? null,
-                    'screen_width' => $data['screen_width'] ?? null,
-                    'screen_height' => $data['screen_height'] ?? null,
+                    'timezone' => null,
+                    'screen_width' => null,
+                    'screen_height' => null,
                     'viewport_width' => $data['viewport_width'] ?? null,
                     'viewport_height' => $data['viewport_height'] ?? null,
-                    'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+                    'user_agent' => null,
                     'landing_path' => $path,
                     'exit_path' => $path,
                     'referrer_host' => $referrerHost,
@@ -80,7 +80,7 @@ class VisitorAnalyticsController extends Controller
                     'utm_campaign' => $data['utm_campaign'] ?? null,
                     'utm_content' => $data['utm_content'] ?? null,
                     'utm_term' => $data['utm_term'] ?? null,
-                    'consented_at' => $now,
+                    'consented_at' => null,
                     'first_seen_at' => $now,
                     'last_seen_at' => $now,
                 ],
@@ -196,3 +196,4 @@ class VisitorAnalyticsController extends Controller
         return $agent === '' || preg_match('/bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|lighthouse|headless/i', $agent) === 1;
     }
 }
+

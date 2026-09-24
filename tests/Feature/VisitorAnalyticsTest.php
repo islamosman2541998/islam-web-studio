@@ -45,8 +45,9 @@ class VisitorAnalyticsTest extends TestCase
         $session = VisitorSession::firstOrFail();
         $this->assertSame('/ar/work', $session->landing_path);
         $this->assertSame('google.com', $session->referrer_host);
-        $this->assertNotSame('127.0.0.1', $session->ip_hash);
-        $this->assertSame(64, strlen((string) $session->ip_hash));
+        $this->assertNull($session->ip_hash);
+        $this->assertNull($session->user_agent);
+        $this->assertNull($session->consented_at);
         $this->assertDatabaseHas('visitor_page_views', ['path' => '/ar/work', 'client_id' => $this->pageviewId]);
     }
 
@@ -82,6 +83,13 @@ class VisitorAnalyticsTest extends TestCase
         $this->assertSame('contact', $event->label);
         $this->assertSame(['locale' => 'ar'], $event->metadata);
         $this->assertStringNotContainsString('must never be stored', $event->toJson());
+    }
+
+    public function test_anonymous_analytics_config_does_not_render_a_popup_by_default(): void
+    {
+        $this->view('site.partials.consent')
+            ->assertSee('tracking-config', false)
+            ->assertDontSee('tracking-consent', false);
     }
 
     public function test_bots_are_ignored(): void
@@ -125,3 +133,5 @@ class VisitorAnalyticsTest extends TestCase
         ], $values);
     }
 }
+
+
