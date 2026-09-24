@@ -95,6 +95,8 @@ class StudioSettings extends Page
                     $field->integer()->minValue(100)->maxValue(1200);
                 }if ($type === 'wait_duration') {
                     $field->integer()->minValue(0)->maxValue(5000)->suffix('ms');
+                }if ($type === 'integer') {
+                    $field->integer()->minValue(30)->maxValue(730);
                 }if ($type === 'opacity') {
                     $field->helperText(Studio::text('opacity_help'));
                 }if ($type === 'font_px') {

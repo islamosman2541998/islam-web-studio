@@ -5,6 +5,7 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MetaLeadWebhookController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\VisitorAnalyticsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,7 @@ Route::get('/sitemap.xml', [SiteController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [SiteController::class, 'robots'])->name('robots');
 Route::get('/webhooks/meta/lead-ads', [MetaLeadWebhookController::class, 'verify'])->name('webhooks.meta.verify');
 Route::post('/webhooks/meta/lead-ads', [MetaLeadWebhookController::class, 'handle'])->name('webhooks.meta.handle');
+Route::post('/analytics/collect', VisitorAnalyticsController::class)->middleware('throttle:240,1')->name('analytics.collect');
 Route::get('/{locale}/admin/{path?}', function (Request $request, string $locale, ?string $path = null) {
     $request->session()->put('studio_locale', $locale);
 
