@@ -15,6 +15,7 @@ use App\Models\VisitorSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Filament\Facades\Filament;
+use Filament\Actions\Testing\TestAction;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -116,6 +117,30 @@ class VisitorAnalyticsTest extends TestCase
         foreach ([VisitorOverview::class, VisitorTrendChart::class, VisitorSourcesChart::class, TopPagesTable::class, RecentVisitorsTable::class] as $widget) {
             Livewire::actingAs($user)->test($widget)->assertOk();
         }
+    }
+
+    public function test_admin_can_delete_a_device_with_all_related_data_and_it_is_recorded_again_on_return(): void
+    {
+        Permission::findOrCreate('dashboard.view', 'web');
+        $user = User::factory()->create(['is_active' => true]);
+        $user->givePermissionTo('dashboard.view');
+
+        $this->collect(['type' => 'pageview', 'path' => '/ar/work'])->assertAccepted();
+        $eventId = (string) Str::uuid();
+        $this->collect(['type' => 'event', 'path' => '/ar/work', 'event_id' => $eventId, 'event' => 'cta_click'])->assertAccepted();
+        $session = VisitorSession::firstOrFail();
+
+        Livewire::actingAs($user)->test(RecentVisitorsTable::class)
+            ->callAction(TestAction::make('delete_device')->table($session))
+            ->assertHasNoActionErrors();
+
+        $this->assertDatabaseCount('visitor_sessions', 0);
+        $this->assertDatabaseCount('visitor_page_views', 0);
+        $this->assertDatabaseCount('visitor_events', 0);
+
+        $this->collect(['type' => 'pageview', 'path' => '/ar/work'])->assertAccepted();
+        $this->assertDatabaseCount('visitor_sessions', 1);
+        $this->assertDatabaseCount('visitor_page_views', 1);
     }
 
     private function collect(array $values)

@@ -47,6 +47,16 @@ class RecentVisitorsTable extends TableWidget
                     ->modalContent(fn (VisitorSession $record) => view('filament.widgets.visitor-journey', ['session' => $record->load(['pageViews.events'])]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel(Studio::text('close')),
+                Action::make('delete_device')
+                    ->label(Studio::text('delete_visitor_device'))
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(Studio::text('delete_visitor_device'))
+                    ->modalDescription(Studio::text('delete_visitor_device_confirmation'))
+                    ->modalSubmitActionLabel(Studio::text('confirm_delete'))
+                    ->action(fn (VisitorSession $record) => $record->delete())
+                    ->successNotificationTitle(Studio::text('visitor_device_deleted')),
             ])
             ->defaultSort('last_seen_at', 'desc')->paginated([10, 25, 50]);
     }
