@@ -143,6 +143,29 @@ class VisitorAnalyticsTest extends TestCase
         $this->assertDatabaseCount('visitor_page_views', 1);
     }
 
+    public function test_admin_can_delete_all_visitor_analytics_data(): void
+    {
+        Permission::findOrCreate('dashboard.view', 'web');
+        $user = User::factory()->create(['is_active' => true]);
+        $user->givePermissionTo('dashboard.view');
+
+        $this->collect(['type' => 'pageview', 'path' => '/ar'])->assertAccepted();
+        $firstEventId = (string) Str::uuid();
+        $this->collect(['type' => 'event', 'event_id' => $firstEventId, 'event' => 'whatsapp_click'])->assertAccepted();
+
+        $this->sessionId = (string) Str::uuid();
+        $this->pageviewId = (string) Str::uuid();
+        $this->collect(['type' => 'pageview', 'path' => '/en'])->assertAccepted();
+
+        Livewire::actingAs($user)->test(VisitorAnalytics::class)
+            ->callAction(TestAction::make('delete_all_visitors'))
+            ->assertHasNoActionErrors();
+
+        $this->assertDatabaseCount('visitor_sessions', 0);
+        $this->assertDatabaseCount('visitor_page_views', 0);
+        $this->assertDatabaseCount('visitor_events', 0);
+    }
+
     private function collect(array $values)
     {
         return $this->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130.0 Windows')

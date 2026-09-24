@@ -2,12 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\VisitorSession;
 use App\Filament\Widgets\RecentVisitorsTable;
 use App\Filament\Widgets\TopPagesTable;
 use App\Filament\Widgets\VisitorOverview;
 use App\Filament\Widgets\VisitorSourcesChart;
 use App\Filament\Widgets\VisitorTrendChart;
 use App\Support\Studio;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Dashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
@@ -75,5 +77,22 @@ class VisitorAnalytics extends Dashboard
                     DatePicker::make('endDate')->label(Studio::text('until'))->default(today())->maxDate(today())->afterOrEqual('startDate')->native(false),
                 ])->columns(2)->compact(),
         ]);
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('delete_all_visitors')
+                ->label(Studio::text('delete_all_visitor_data'))
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading(Studio::text('delete_all_visitor_data'))
+                ->modalDescription(Studio::text('delete_all_visitor_data_confirmation'))
+                ->modalSubmitActionLabel(Studio::text('confirm_delete_all'))
+                ->action(fn () => VisitorSession::query()->delete())
+                ->successNotificationTitle(Studio::text('all_visitor_data_deleted'))
+                ->successRedirectUrl(static::getUrl()),
+        ];
     }
 }
