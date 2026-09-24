@@ -55,7 +55,7 @@ class RecentVisitorsTable extends TableWidget
                     ->modalHeading(Studio::text('delete_visitor_device'))
                     ->modalDescription(Studio::text('delete_visitor_device_confirmation'))
                     ->modalSubmitActionLabel(Studio::text('confirm_delete'))
-                    ->action(fn (VisitorSession $record) => $record->delete())
+                    ->action(fn (VisitorSession $record) => $record->deleteWithAnalyticsData())
                     ->successNotificationTitle(Studio::text('visitor_device_deleted')),
             ])
             ->defaultSort('last_seen_at', 'desc')->paginated([10, 25, 50]);

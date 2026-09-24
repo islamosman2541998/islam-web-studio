@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\VisitorSession;
+use App\Models\VisitorEvent;
+use App\Models\VisitorPageView;
 use App\Filament\Widgets\RecentVisitorsTable;
 use App\Filament\Widgets\TopPagesTable;
 use App\Filament\Widgets\VisitorOverview;
@@ -15,6 +17,7 @@ use Filament\Pages\Dashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\DB;
 
 class VisitorAnalytics extends Dashboard
 {
@@ -90,9 +93,16 @@ class VisitorAnalytics extends Dashboard
                 ->modalHeading(Studio::text('delete_all_visitor_data'))
                 ->modalDescription(Studio::text('delete_all_visitor_data_confirmation'))
                 ->modalSubmitActionLabel(Studio::text('confirm_delete_all'))
-                ->action(fn () => VisitorSession::query()->delete())
-                ->successNotificationTitle(Studio::text('all_visitor_data_deleted'))
-                ->successRedirectUrl(static::getUrl()),
+                ->action(function (): void {
+                    DB::transaction(function (): void {
+                        VisitorEvent::query()->delete();
+                        VisitorPageView::query()->delete();
+                        VisitorSession::query()->delete();
+                    });
+
+                    $this->redirect(static::getUrl(), navigate: false);
+                })
+                ->successNotificationTitle(Studio::text('all_visitor_data_deleted')),
         ];
     }
 }

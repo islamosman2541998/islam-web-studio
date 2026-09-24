@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class VisitorSession extends Model
 {
@@ -26,5 +27,14 @@ class VisitorSession extends Model
     public function events(): HasMany
     {
         return $this->hasMany(VisitorEvent::class)->orderBy('occurred_at');
+    }
+
+    public function deleteWithAnalyticsData(): void
+    {
+        DB::transaction(function (): void {
+            $this->events()->delete();
+            $this->pageViews()->delete();
+            $this->delete();
+        });
     }
 }
