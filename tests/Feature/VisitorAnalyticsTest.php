@@ -85,11 +85,15 @@ class VisitorAnalyticsTest extends TestCase
         $this->assertStringNotContainsString('must never be stored', $event->toJson());
     }
 
-    public function test_anonymous_analytics_config_does_not_render_a_popup_by_default(): void
+    public function test_anonymous_analytics_renders_a_notice_with_two_acknowledgement_buttons(): void
     {
         $this->view('site.partials.consent')
             ->assertSee('tracking-config', false)
-            ->assertDontSee('tracking-consent', false);
+            ->assertSee('analytics-notice', false)
+            ->assertSee('تمام، فهمت')
+            ->assertSee('متابعة التصفح')
+            ->assertDontSee('tracking-consent', false)
+            ->assertDontSee('data-consent="decline"', false);
     }
 
     public function test_bots_are_ignored(): void

@@ -194,6 +194,11 @@ function tracking(signal){
     if(!raw)return;
     const config=JSON.parse(raw.textContent);
     visitorTracking(signal,config);
+    const notice=document.getElementById('analytics-notice');
+    let noticeSeen;
+    try{noticeSeen=localStorage.getItem('studio-analytics-notice');}catch{}
+    if(notice&&noticeSeen!=='acknowledged')notice.hidden=false;
+    notice?.querySelectorAll('[data-analytics-notice]').forEach(button=>button.addEventListener('click',()=>{try{localStorage.setItem('studio-analytics-notice','acknowledged');}catch{}notice.hidden=true;},{signal}));
     if(!config.external)return;
     const banner=document.getElementById('tracking-consent');
     if(!banner)return;

@@ -209,6 +209,9 @@ class TranslationRegistry
                     'privacy_errors' => [
                         'label' => ['ar' => 'الخصوصية وصفحة الخطأ', 'en' => 'Privacy and error page'],
                         'fields' => [
+                            'analytics_notice' => self::field('رسالة إشعار إحصائيات الزوار', 'Visitor analytics notice', 'textarea'),
+                            'analytics_notice_ok' => self::field('زر فهمت', 'Got it button'),
+                            'continue_browsing' => self::field('زر متابعة التصفح', 'Continue browsing button'),
                             'tracking_consent' => self::field('رسالة ملفات الارتباط', 'Cookie consent message', 'textarea'),
                             'accept' => self::field('زر الموافقة', 'Accept button'),
                             'decline' => self::field('زر الرفض', 'Decline button'),
