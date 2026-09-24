@@ -195,10 +195,10 @@ function tracking(signal){
     const config=JSON.parse(raw.textContent);
     visitorTracking(signal,config);
     const notice=document.getElementById('analytics-notice');
-    let noticeSeen;
-    try{noticeSeen=sessionStorage.getItem('studio-analytics-notice');}catch{}
+    const noticeCookie='studio_analytics_notice';
+    const noticeSeen=document.cookie.split(';').map(part=>part.trim()).find(part=>part.startsWith(noticeCookie+'='))?.slice(noticeCookie.length+1);
     if(notice&&noticeSeen!=='acknowledged')notice.hidden=false;
-    notice?.querySelectorAll('[data-analytics-notice]').forEach(button=>button.addEventListener('click',()=>{try{sessionStorage.setItem('studio-analytics-notice','acknowledged');}catch{}notice.hidden=true;},{signal}));
+    notice?.querySelectorAll('[data-analytics-notice]').forEach(button=>button.addEventListener('click',()=>{document.cookie=noticeCookie+'=acknowledged; Path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');notice.hidden=true;},{signal}));
     if(!config.external)return;
     const banner=document.getElementById('tracking-consent');
     if(!banner)return;
