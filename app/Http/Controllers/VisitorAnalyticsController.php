@@ -56,9 +56,17 @@ class VisitorAnalyticsController extends Controller
             $agent = $this->agent((string) $request->userAgent());
             $referrerHost = $this->host($data['referrer'] ?? null);
             $path = $this->safePath($data['path'] ?? '/');
-            $session = VisitorSession::firstOrCreate(
-                ['public_id' => $data['session_id']],
-                [
+            $session = VisitorSession::where('public_id', $data['session_id'])->first();
+
+            // A stale browser tab can still send activity after the administrator
+            // clears analytics. Only a fresh page view may start a new session.
+            if (! $session && ($data['type'] !== 'pageview' || blank($data['pageview_id'] ?? null))) {
+                return;
+            }
+
+            if (! $session) {
+                $session = VisitorSession::create([
+                    'public_id' => $data['session_id'],
                     'visitor_hash' => hash_hmac('sha256', $data['visitor_id'], (string) config('app.key')),
                     'ip_hash' => null,
                     'country_code' => $this->country($request),
@@ -83,8 +91,8 @@ class VisitorAnalyticsController extends Controller
                     'consented_at' => null,
                     'first_seen_at' => $now,
                     'last_seen_at' => $now,
-                ],
-            );
+                ]);
+            }
 
             $session->forceFill([
                 'last_seen_at' => $now,
@@ -196,4 +204,3 @@ class VisitorAnalyticsController extends Controller
         return $agent === '' || preg_match('/bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|lighthouse|headless/i', $agent) === 1;
     }
 }
-

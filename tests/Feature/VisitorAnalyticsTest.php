@@ -8,14 +8,16 @@ use App\Filament\Widgets\TopPagesTable;
 use App\Filament\Widgets\VisitorOverview;
 use App\Filament\Widgets\VisitorSourcesChart;
 use App\Filament\Widgets\VisitorTrendChart;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\VisitorEvent;
 use App\Models\VisitorPageView;
 use App\Models\VisitorSession;
+use App\Support\Studio;
+use Filament\Actions\Testing\TestAction;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
-use Filament\Facades\Filament;
-use Filament\Actions\Testing\TestAction;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -25,7 +27,9 @@ class VisitorAnalyticsTest extends TestCase
     use RefreshDatabase;
 
     private string $visitorId;
+
     private string $sessionId;
+
     private string $pageviewId;
 
     protected function setUp(): void
@@ -97,6 +101,14 @@ class VisitorAnalyticsTest extends TestCase
             ->assertDontSee('data-consent="decline"', false);
     }
 
+    public function test_analytics_config_contains_the_current_reset_token(): void
+    {
+        Studio::put('analytics.reset_token', ['token' => 'browser-reset-2'], 'analytics');
+
+        $this->view('site.partials.consent')
+            ->assertSee('"reset":"browser-reset-2"', false);
+    }
+
     public function test_bots_are_ignored(): void
     {
         $this->withHeader('User-Agent', 'Googlebot')->postJson(route('analytics.collect'), $this->base(['type' => 'pageview']))
@@ -164,6 +176,18 @@ class VisitorAnalyticsTest extends TestCase
         $this->assertDatabaseCount('visitor_sessions', 0);
         $this->assertDatabaseCount('visitor_page_views', 0);
         $this->assertDatabaseCount('visitor_events', 0);
+
+        $reset = Setting::where('key', 'analytics.reset_token')->firstOrFail()->value['token'] ?? null;
+        $this->assertNotEmpty($reset);
+
+        // A heartbeat from a tab opened before the reset must not recreate a ghost device.
+        $this->collect(['type' => 'activity', 'path' => '/en', 'duration' => 30])->assertAccepted();
+        $this->assertDatabaseCount('visitor_sessions', 0);
+
+        // A real visit after the reset is recorded normally.
+        $this->collect(['type' => 'pageview', 'path' => '/en'])->assertAccepted();
+        $this->assertDatabaseCount('visitor_sessions', 1);
+        $this->assertDatabaseCount('visitor_page_views', 1);
     }
 
     private function collect(array $values)
@@ -185,5 +209,3 @@ class VisitorAnalyticsTest extends TestCase
         ], $values);
     }
 }
-
-

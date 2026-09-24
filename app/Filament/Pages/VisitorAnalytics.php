@@ -2,14 +2,14 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\VisitorSession;
-use App\Models\VisitorEvent;
-use App\Models\VisitorPageView;
 use App\Filament\Widgets\RecentVisitorsTable;
 use App\Filament\Widgets\TopPagesTable;
 use App\Filament\Widgets\VisitorOverview;
 use App\Filament\Widgets\VisitorSourcesChart;
 use App\Filament\Widgets\VisitorTrendChart;
+use App\Models\VisitorEvent;
+use App\Models\VisitorPageView;
+use App\Models\VisitorSession;
 use App\Support\Studio;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -18,6 +18,7 @@ use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class VisitorAnalytics extends Dashboard
 {
@@ -99,6 +100,8 @@ class VisitorAnalytics extends Dashboard
                         VisitorPageView::query()->delete();
                         VisitorSession::query()->delete();
                     });
+
+                    Studio::put('analytics.reset_token', ['token' => (string) Str::uuid()], 'analytics');
 
                     $this->redirect(static::getUrl(), navigate: false);
                 })
