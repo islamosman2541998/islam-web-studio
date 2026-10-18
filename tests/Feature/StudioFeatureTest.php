@@ -617,6 +617,41 @@ class StudioFeatureTest extends TestCase
             ->assertDontSee('service-card-index');
     }
 
+    public function test_service_details_use_the_compact_layout_and_do_not_render_an_empty_packages_section(): void
+    {
+        $image = Asset::factory()->create();
+        $service = Service::factory()->create([
+            'status' => 'published',
+            'image_media_id' => $image->id,
+            'pricing_type' => 'packages',
+            'slug' => ['ar' => 'خدمة-مدمجة', 'en' => 'compact-service'],
+            'long_description' => ['ar' => '<h2>عنوان التفاصيل</h2><p>وصف مختصر.</p>', 'en' => '<h2>Details heading</h2><p>Short copy.</p>'],
+        ]);
+
+        $this->get('/ar/services/خدمة-مدمجة')
+            ->assertOk()
+            ->assertSee('class="service-detail-page"', false)
+            ->assertSee('service-page-intro', false)
+            ->assertSee('service-overview', false)
+            ->assertSee('service-detail-hero', false)
+            ->assertSee('service-detail-content', false)
+            ->assertSee('class="service-shell shell service-request"', false)
+            ->assertDontSee('class="section service-shell shell service-packages"', false);
+
+        $service->packages()->create([
+            'name' => ['ar' => 'الباقة الأساسية', 'en' => 'Starter'],
+            'price' => 1000,
+            'currency' => 'EGP',
+            'features' => ['ar' => 'ميزة واحدة', 'en' => 'One feature'],
+            'sort_order' => 0,
+        ]);
+
+        $this->get('/ar/services/خدمة-مدمجة')
+            ->assertOk()
+            ->assertSee('class="section service-shell shell service-packages"', false)
+            ->assertDontSee('class="service-shell shell service-request"', false);
+    }
+
     public function test_section_and_page_headings_are_managed_by_organized_translations(): void
     {
         $copy = [

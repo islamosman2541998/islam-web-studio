@@ -74,12 +74,15 @@
 .site-footer .brand-custom-frame {
     width: 198px;
     height: 64px;
-    background: transparent;
+    background: color-mix(in srgb, var(--beige) 94%, transparent);
+    border-color: color-mix(in srgb, #fff 64%, transparent);
+    box-shadow: 0 12px 34px #00000020;
 }
 
 .site-footer .brand-custom {
-    width: 198px;
-    height: 64px;
+    inset: 6px 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 12px);
 }
 
 .footer-brand-column > p {
@@ -334,10 +337,14 @@
         grid-template-columns: 1fr;
     }
 
-    .site-footer .brand-custom-frame,
-    .site-footer .brand-custom {
+    .site-footer .brand-custom-frame {
         width: 176px;
         height: 58px;
+    }
+
+    .site-footer .brand-custom {
+        width: calc(100% - 20px);
+        height: calc(100% - 12px);
     }
 }
 

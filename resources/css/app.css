@@ -108,6 +108,91 @@ html[lang=en] .dynamic-page-intro h1{font-size:clamp(2.5rem,3.6vw,4rem);line-hei
     border-radius:18px;
     box-shadow:0 24px 58px #061c1530;
 }
+
+/* Readable brand treatment on transparent and dark surfaces */
+.brand-custom-frame {
+    position: relative;
+    width: 176px;
+    height: 58px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    overflow: hidden;
+    transition: background .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+
+.brand-custom {
+    position: absolute;
+    inset: 6px 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 12px);
+    object-fit: contain;
+    transform: scale(1.38);
+}
+
+.brand-custom-on-light {
+    display: none;
+}
+
+.brand-custom-on-dark {
+    display: block;
+}
+
+.home-header:not(.is-solid) .brand-custom-frame,
+.site-footer .brand-custom-frame {
+    background: color-mix(in srgb, var(--beige) 94%, transparent);
+    border-color: color-mix(in srgb, #fff 64%, transparent);
+    box-shadow: 0 10px 32px #00000018;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.site-header.is-solid .brand-custom-on-light,
+.menu-is-open .site-header .brand-custom-on-light {
+    display: block;
+}
+
+.site-header.is-solid .brand-custom-on-dark,
+.menu-is-open .site-header .brand-custom-on-dark {
+    display: none;
+}
+
+[data-theme=dark] .site-header.is-solid .brand-custom-on-light {
+    display: none;
+}
+
+[data-theme=dark] .site-header.is-solid .brand-custom-on-dark {
+    display: block;
+}
+
+.site-footer .brand-custom-on-light {
+    display: none;
+}
+
+.site-footer .brand-custom-on-dark {
+    display: block;
+}
+
+@media(max-width:767px) {
+    .brand-custom-frame {
+        width: 146px;
+        height: 50px;
+        padding: 5px 8px;
+        border-radius: 8px;
+    }
+
+    .brand-custom {
+        inset: 5px 8px;
+        width: calc(100% - 16px);
+        height: calc(100% - 10px);
+        transform: scale(1.34);
+    }
+
+    .site-footer .brand-custom-frame {
+        width: 164px;
+        height: 54px;
+    }
+}
 .studio-video::after{
     content:'';
     position:absolute;
@@ -798,6 +883,393 @@ html[lang='en'] .contact-page .eyebrow {
     cursor: wait;
     opacity: .68;
     transform: none;
+}
+
+/* Compact service details */
+.service-detail-page .service-shell {
+    width: min(1120px, calc(100% - 112px));
+}
+
+.service-page-intro {
+    padding-block: 36px 28px;
+}
+
+.service-page-intro .eyebrow {
+    margin-bottom: 12px;
+}
+
+.service-detail-page .service-page-intro h1 {
+    max-width: 760px;
+    font-size: clamp(1.9rem, 2.2vw, 2.4rem);
+    line-height: 1.3;
+    text-wrap: balance;
+}
+
+html[lang=en] .service-detail-page .service-page-intro h1 {
+    font-size: clamp(2rem, 2.4vw, 2.65rem);
+    line-height: 1.15;
+}
+
+.service-page-intro > p {
+    max-width: 640px;
+    margin-top: 12px;
+    font-size: 14.5px;
+    line-height: 1.75;
+}
+
+.service-page-intro .button {
+    min-height: 44px;
+    margin-top: 17px;
+    padding: 8px 18px;
+    font-size: 12px;
+}
+
+.service-overview {
+    display: grid;
+    grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+    gap: 30px;
+    align-items: stretch;
+    padding-bottom: 52px;
+    border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.service-overview--without-media {
+    grid-template-columns: 1fr;
+}
+
+.service-detail-hero {
+    min-height: 430px;
+    max-height: 560px;
+    border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+    border-radius: 4px;
+}
+
+.service-detail-hero .media-picture {
+    width: 100%;
+    height: 100%;
+    min-height: 430px;
+    max-height: 560px;
+    aspect-ratio: auto;
+}
+
+.service-detail-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.service-detail-content {
+    display: grid;
+    gap: 24px;
+    align-content: start;
+    padding: 29px 31px;
+    border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    background: color-mix(in srgb, var(--surface) 76%, transparent);
+}
+
+.service-detail-content .rich-content {
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.service-detail-content .rich-content h2 {
+    margin: 19px 0 8px;
+    font-size: 22px;
+    line-height: 1.45;
+}
+
+.service-detail-content .rich-content h3 {
+    margin: 16px 0 7px;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+.service-detail-content .rich-content :is(h2, h3):first-child {
+    margin-top: 0;
+}
+
+.service-detail-content .rich-content p {
+    margin-bottom: 10px;
+}
+
+.service-detail-content aside h2 {
+    font-size: 23px;
+    line-height: 1.4;
+}
+
+.service-detail-content .feature-list {
+    margin-top: 10px;
+}
+
+.service-detail-content .feature-list li {
+    gap: 9px;
+    padding-block: 9px;
+    font-size: 12.5px;
+}
+
+.service-packages {
+    padding-block: 48px 54px;
+}
+
+.service-packages .section-heading {
+    margin-bottom: 26px;
+}
+
+.service-packages .section-heading h2,
+.service-related .section-heading h2 {
+    font-size: clamp(1.7rem, 2.2vw, 2.15rem);
+}
+
+.service-packages .package {
+    gap: 14px;
+    padding: 23px;
+}
+
+.service-packages .package h3 {
+    font-size: 18px;
+}
+
+.service-packages .package-price {
+    font-size: 27px;
+}
+
+.service-detail-page .service-request {
+    width: min(1120px, calc(100% - 112px));
+    max-width: none;
+    padding: 34px 0 48px;
+    text-align: start;
+}
+
+.service-detail-page .service-request h2 {
+    font-size: clamp(1.55rem, 2vw, 1.95rem);
+}
+
+.service-related {
+    padding-block: 50px 62px;
+}
+
+.service-related .section-heading {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 28px;
+}
+
+.service-related .section-heading::after {
+    width: 100%;
+    height: 1px;
+    content: '';
+    background: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.service-related .section-heading h2 {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.service-related .projects-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 34px 24px;
+}
+
+.service-related .project-cover {
+    aspect-ratio: 1.42;
+}
+
+.service-related .project-description {
+    gap: 12px;
+    padding-top: 13px;
+}
+
+.service-related .project-description h3 {
+    margin-top: 4px;
+    font-size: 17px;
+    line-height: 1.55;
+}
+
+.service-related .project-description .overline {
+    font-size: 9px;
+}
+
+.service-related .project-arrow {
+    font-size: 23px;
+}
+
+.service-related .project-metric {
+    gap: 10px;
+    margin-top: 9px;
+    padding-top: 9px;
+}
+
+.service-related .project-metric b {
+    font-size: 17px;
+}
+
+.service-related .project-metric span {
+    font-size: 10px;
+}
+
+@media(max-width:1199px) {
+    .service-detail-page .service-shell,
+    .service-detail-page .service-request {
+        width: min(1040px, calc(100% - 64px));
+    }
+}
+
+@media(max-width:1000px) {
+    .service-related .projects-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media(max-width:900px) {
+    .service-overview {
+        grid-template-columns: 1fr;
+        gap: 22px;
+    }
+
+    .service-detail-hero,
+    .service-detail-hero .media-picture {
+        min-height: 0;
+        max-height: 430px;
+    }
+
+    .service-detail-hero .media-picture {
+        aspect-ratio: 1.65;
+    }
+}
+
+@media(max-width:767px) {
+    .service-detail-page .service-shell,
+    .service-detail-page .service-request {
+        width: calc(100% - 40px);
+    }
+
+    .service-page-intro {
+        padding-block: 28px 22px;
+    }
+
+    .service-page-intro .eyebrow {
+        margin-bottom: 13px;
+    }
+
+    .service-detail-page .service-page-intro h1,
+    html[lang=en] .service-detail-page .service-page-intro h1 {
+        font-size: clamp(1.65rem, 7vw, 1.9rem);
+        line-height: 1.35;
+    }
+
+    .service-page-intro > p {
+        margin-top: 10px;
+        font-size: 13px;
+        line-height: 1.75;
+    }
+
+    .service-page-intro .button {
+        min-height: 42px;
+        margin-top: 15px;
+        padding: 7px 16px;
+        font-size: 12px;
+    }
+
+    .service-overview {
+        gap: 18px;
+        padding-bottom: 38px;
+    }
+
+    .service-detail-hero,
+    .service-detail-hero .media-picture {
+        max-height: 290px;
+    }
+
+    .service-detail-hero .media-picture {
+        aspect-ratio: 1.4;
+    }
+
+    .service-detail-content {
+        gap: 22px;
+        padding: 24px 20px;
+    }
+
+    .service-detail-content .rich-content {
+        font-size: 13px;
+        line-height: 1.8;
+    }
+
+    .service-detail-content .rich-content h2 {
+        margin: 17px 0 8px;
+        font-size: 20px;
+    }
+
+    .service-detail-content .rich-content h3 {
+        margin: 15px 0 7px;
+        font-size: 16px;
+    }
+
+    .service-detail-content .rich-content p {
+        margin-bottom: 13px;
+    }
+
+    .service-detail-content aside h2 {
+        font-size: 21px;
+    }
+
+    .service-detail-content .feature-list {
+        margin-top: 12px;
+    }
+
+    .service-detail-content .feature-list li {
+        padding-block: 10px;
+        font-size: 12px;
+    }
+
+    .service-packages {
+        padding-block: 38px 44px;
+    }
+
+    .service-packages .section-heading,
+    .service-related .section-heading {
+        margin-bottom: 26px;
+    }
+
+    .service-packages .section-heading h2,
+    .service-related .section-heading h2 {
+        font-size: 1.65rem;
+    }
+
+    .service-packages .package {
+        gap: 12px;
+        padding: 20px;
+    }
+
+    .service-detail-page .service-request {
+        padding: 27px 0 40px;
+    }
+
+    .service-detail-page .service-request h2 {
+        font-size: 1.5rem;
+    }
+
+    .service-related {
+        padding-block: 40px 48px;
+    }
+
+    .service-related .section-heading {
+        gap: 14px;
+    }
+
+    .service-related .section-heading h2 {
+        font-size: 1.55rem;
+    }
+
+    .service-related .projects-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    .service-related .project-description h3 {
+        font-size: 16px;
+    }
 }
 
 
