@@ -1527,8 +1527,8 @@ class StudioFeatureTest extends TestCase
             ->assertSee('Managed introduction copy')
             ->assertSee('Learn more')
             ->assertSee('target="_blank"', false)
-            ->assertSee('Managed founder label')
-            ->assertSee('Managed signature');
+            ->assertDontSee('Managed founder label')
+            ->assertDontSee('Managed signature');
 
         foreach (['home_intro_media_caption', 'home_intro_founder_label'] as $key) {
             $translation = Translation::where('key', $key)->firstOrFail();

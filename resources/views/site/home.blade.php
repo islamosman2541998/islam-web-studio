@@ -76,8 +76,6 @@
     $introLink = \App\Support\Studio::safeUrl($introLinkRaw);
     $introLinkNewTab = (bool) \App\Support\Studio::setting('home.intro_link_new_tab', false);
     $introLinkText = \App\Support\Studio::text('home_intro_link_text');
-    $introFounderLabel = \App\Support\Studio::text('home_intro_founder_label');
-    $introSignature = \App\Support\Studio::text('home_intro_signature');
 @endphp
 @if(\App\Support\Studio::setting('home.intro_enabled', true))
 <section id="home-intro" @class(['section', 'shell', 'about-intro', 'about-intro--without-media' => ! $introMediaEnabled])>
@@ -108,12 +106,6 @@
         @endif
         @if(\App\Support\Studio::setting('home.intro_link_enabled', true) && filled($introLinkText) && $introLink !== '#')
                     <a class="text-link" href="{{ $introLink }}" @if(! $introLinkNewTab && str_starts_with($introLinkRaw, '/')) wire:navigate @endif @if($introLinkNewTab) target="_blank" rel="noopener noreferrer" @endif>{{ $introLinkText }} <x-arrow-up-right /></a>
-        @endif
-        @if(filled($introFounderLabel) || filled($introSignature))
-            <div class="intro-signature">
-                @if(filled($introFounderLabel))<span>{{ $introFounderLabel }}</span>@endif
-                @if(filled($introSignature))<span class="signature" dir="auto">{{ $introSignature }}</span>@endif
-            </div>
         @endif
     </div>
 </section>
