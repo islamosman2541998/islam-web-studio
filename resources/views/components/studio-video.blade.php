@@ -80,7 +80,7 @@
 
     <span class="studio-video__loader" data-video-loading role="status" aria-label="{{ $labels['loading'] }}"></span>
 
-    <button class="studio-video__center" type="button" data-video-toggle aria-label="{{ $labels['play'] }}">
+    <button class="studio-video__center swiper-no-swiping" type="button" data-video-toggle aria-label="{{ $labels['play'] }}">
         <span>
             <svg class="studio-video__play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" /></svg>
             <svg class="studio-video__pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>

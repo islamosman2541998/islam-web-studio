@@ -25,7 +25,6 @@
                 :poster="$cover"
                 :title="$project->titleText()"
                 variant="card"
-                :defer="(bool) $cover"
             />
 
             <a
