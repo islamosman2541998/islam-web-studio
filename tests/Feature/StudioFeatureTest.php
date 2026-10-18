@@ -257,6 +257,17 @@ class StudioFeatureTest extends TestCase
         $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /');
     }
 
+    public function test_home_card_sections_render_as_mobile_autoplay_sliders(): void
+    {
+        $response = $this->get('/ar')->assertOk();
+
+        $this->assertSame(3, substr_count($response->getContent(), 'data-swiper-kind="mobile-cards"'));
+        $response
+            ->assertSee('home-card-controls', false)
+            ->assertSee('data-swiper-kind="reviews" data-autoplay="1"', false)
+            ->assertSee('data-drag="1"', false);
+    }
+
     public function test_partners_are_optional_in_admin_and_render_as_a_localized_home_slider(): void
     {
         config(['studio.demo' => false]);

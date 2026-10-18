@@ -39,7 +39,15 @@
         </div>
         <a class="text-link" href="{{ route('services.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a>
     </header>
-    <div class="services-grid">@foreach($services as $service)<x-service-card :service="$service" :number="$loop->iteration" />@endforeach</div>
+    <div class="swiper home-cards-swiper" data-studio-swiper data-swiper-kind="mobile-cards" data-autoplay="1" data-delay="4200" data-drag="1">
+        <div class="swiper-wrapper services-grid">
+            @foreach($services as $service)<div class="swiper-slide"><x-service-card :service="$service" :number="$loop->iteration" /></div>@endforeach
+        </div>
+        <div class="slider-controls home-card-controls">
+            <button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">{{ app()->getLocale() === 'ar' ? '→' : '←' }}</button>
+            <button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">{{ app()->getLocale() === 'ar' ? '←' : '→' }}</button>
+        </div>
+    </div>
 </section>
 <section class="section work-section">
     <div class="shell">
@@ -51,7 +59,13 @@
             </div>
             <a class="text-link" href="{{ route('projects.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a>
         </div>
-        <div class="projects-grid">@foreach($projects as $project)<x-project-card :project="$project" />@endforeach</div>
+        <div class="swiper home-cards-swiper" data-studio-swiper data-swiper-kind="mobile-cards" data-autoplay="1" data-delay="4600" data-drag="1">
+            <div class="swiper-wrapper projects-grid">@foreach($projects as $project)<div class="swiper-slide"><x-project-card :project="$project" /></div>@endforeach</div>
+            <div class="slider-controls home-card-controls">
+                <button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">{{ app()->getLocale() === 'ar' ? '→' : '←' }}</button>
+                <button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">{{ app()->getLocale() === 'ar' ? '←' : '→' }}</button>
+            </div>
+        </div>
     </div>
 </section>
 @php
@@ -105,8 +119,8 @@
 </section>
 @endif
 <section class="section process-section"><div class="shell process-grid"><div><span class="eyebrow">03{{ filled($homeSections['process']['label']) ? ' / '.$homeSections['process']['label'] : '' }}</span>@if(filled($homeSections['process']['title']))<h2>{{ $homeSections['process']['title'] }}</h2>@endif @if(filled($homeSections['process']['description']))<p>{{ $homeSections['process']['description'] }}</p>@endif</div>@include('site.partials.process')</div></section>
-<section class="section shell"><div class="section-heading"><span class="eyebrow">04{{ filled($homeSections['testimonials']['label']) ? ' / '.$homeSections['testimonials']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['testimonials']['title']))<h2>{{ $homeSections['testimonials']['title'] }}</h2>@endif @if(filled($homeSections['testimonials']['description']))<p>{{ $homeSections['testimonials']['description'] }}</p>@endif</div></div><div class="swiper reviews-swiper" data-studio-swiper data-swiper-kind="reviews" data-drag="1"><div class="swiper-wrapper">@foreach($testimonials as $review)<div class="swiper-slide"><x-testimonial :review="$review" /></div>@endforeach</div><div class="slider-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></div></section>
-<section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05{{ filled($homeSections['posts']['label']) ? ' / '.$homeSections['posts']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['posts']['title']))<h2>{{ $homeSections['posts']['title'] }}</h2>@endif @if(filled($homeSections['posts']['description']))<p>{{ $homeSections['posts']['description'] }}</p>@endif</div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a></div><div class="posts-grid">@foreach($posts as $post)<x-post-card :post="$post" />@endforeach</div></div></section>
+<section class="section shell"><div class="section-heading"><span class="eyebrow">04{{ filled($homeSections['testimonials']['label']) ? ' / '.$homeSections['testimonials']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['testimonials']['title']))<h2>{{ $homeSections['testimonials']['title'] }}</h2>@endif @if(filled($homeSections['testimonials']['description']))<p>{{ $homeSections['testimonials']['description'] }}</p>@endif</div></div><div class="swiper reviews-swiper" data-studio-swiper data-swiper-kind="reviews" data-autoplay="1" data-delay="4800" data-drag="1" data-loop="1"><div class="swiper-wrapper">@foreach($testimonials as $review)<div class="swiper-slide"><x-testimonial :review="$review" /></div>@endforeach</div><div class="slider-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></div></section>
+<section class="section insights-section"><div class="shell"><div class="section-heading"><span class="eyebrow">05{{ filled($homeSections['posts']['label']) ? ' / '.$homeSections['posts']['label'] : '' }}</span><div class="section-heading-copy">@if(filled($homeSections['posts']['title']))<h2>{{ $homeSections['posts']['title'] }}</h2>@endif @if(filled($homeSections['posts']['description']))<p>{{ $homeSections['posts']['description'] }}</p>@endif</div><a class="text-link" href="{{ route('posts.index',['locale'=>app()->getLocale()]) }}" wire:navigate>@t('view_all') <x-arrow-up-right /></a></div><div class="swiper home-cards-swiper" data-studio-swiper data-swiper-kind="mobile-cards" data-autoplay="1" data-delay="5000" data-drag="1"><div class="swiper-wrapper posts-grid">@foreach($posts as $post)<div class="swiper-slide"><x-post-card :post="$post" /></div>@endforeach</div><div class="slider-controls home-card-controls"><button class="swiper-prev" type="button" aria-label="{{ \App\Support\Studio::text('previous') }}">{{ app()->getLocale() === 'ar' ? '→' : '←' }}</button><button class="swiper-next" type="button" aria-label="{{ \App\Support\Studio::text('next') }}">{{ app()->getLocale() === 'ar' ? '←' : '→' }}</button></div></div></div></section>
 @if($partners->isNotEmpty())
 <section class="section partners-section" aria-label="{{ \App\Support\Studio::text('partners_title') }}">
     <div class="shell">
