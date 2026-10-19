@@ -1548,8 +1548,15 @@ class StudioFeatureTest extends TestCase
         $this->get('/en')->assertOk()->assertDontSee('id="home-intro"', false);
     }
 
-    public function test_public_cta_arrows_use_svg_instead_of_an_emoji_prone_glyph(): void
+    public function test_public_pages_hide_decorative_diagonal_arrows_and_contact_page_uses_icon_details(): void
     {
+        Studio::put('general.email', 'hello@example.com');
+        Studio::put('general.phone', '01114292011');
+        Studio::put('general.socials', [
+            ['label' => 'Facebook', 'url' => 'https://facebook.com/example'],
+            ['label' => 'Instagram', 'url' => 'https://instagram.com/example'],
+        ]);
+
         MethodologyStep::query()->create([
             'title' => ['ar' => 'نرسم الطريق', 'en' => 'Map the path'],
             'icon' => '↗',
@@ -1561,9 +1568,18 @@ class StudioFeatureTest extends TestCase
         foreach (['/ar', '/ar/contact'] as $path) {
             $this->get($path)
                 ->assertOk()
-                ->assertSee('class="arrow-up-right-icon"', false)
+                ->assertDontSee('class="arrow-up-right-icon"', false)
                 ->assertDontSee('↗', false);
         }
+
+        $this->get('/ar/contact')
+            ->assertOk()
+            ->assertSee('class="contact-detail-icon"', false)
+            ->assertSee('href="mailto:hello@example.com"', false)
+            ->assertSee('href="tel:01114292011"', false)
+            ->assertSee('class="contact-social-links"', false)
+            ->assertSee('aria-label="Facebook"', false)
+            ->assertSee('aria-label="Instagram"', false);
     }
 
     public function test_footer_has_four_dynamic_columns_and_uses_dashboard_contact_settings(): void
