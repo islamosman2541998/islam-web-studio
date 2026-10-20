@@ -2,10 +2,9 @@
 
 namespace App\Livewire;
 
-use App\Models\Lead;
 use App\Models\Service;
+use App\Support\LeadSubmission;
 use App\Support\Studio;
-use App\Support\StudioNotifier;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -55,14 +54,13 @@ class QuoteForm extends Component
 
             return;
         }
-        $data = $this->validate(['name' => 'required|string|min:2|max:100', 'email' => 'required|email|max:180', 'phone' => ['required', 'string', 'max:30', 'regex:/^[+0-9() .-]{7,30}$/'], 'message' => 'required|string|min:15|max:5000', 'service_id' => 'nullable|integer', 'consent' => 'accepted'], [], ['name' => Studio::text('name'), 'email' => Studio::text('email'), 'phone' => Studio::text('phone'), 'message' => Studio::text('message'), 'consent' => Studio::text('privacy_consent')]);
-        if ($this->service_id && ! Service::published($this->locale)->whereKey($this->service_id)->exists()) {
+        $data = $this->validate(LeadSubmission::rules(), [], LeadSubmission::attributes());
+        if (! LeadSubmission::serviceIsAvailable($this->service_id, $this->locale)) {
             $this->addError('service_id', Studio::text('choose_service'));
 
             return;
         }
-        $lead = Lead::create(['name' => $data['name'], 'email' => $data['email'], 'phone' => $data['phone'], 'message' => $data['message'], 'service_id' => $this->service_id ?: null, 'source' => 'form', 'status' => 'new', 'locale' => $this->locale, 'is_demo' => config('studio.demo')]);
-        app(StudioNotifier::class)->newLead($lead);
+        LeadSubmission::create([...$data, 'service_id' => $this->service_id], 'form', $this->locale);
         $this->sent = true;
         $this->reset('name', 'email', 'phone', 'message', 'consent');
         $this->dispatch('studio-toast', type: 'success', title: Studio::text('request_received'), message: Studio::text('quote_success'));

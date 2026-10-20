@@ -233,6 +233,7 @@ return [
     'ended' => 'Ended',
     'timer' => 'Timer',
     'form' => 'Form',
+    'mobile_app' => 'Mobile app',
     'manual' => 'Manual',
     'new' => 'New',
     'contacted' => 'Contacted',

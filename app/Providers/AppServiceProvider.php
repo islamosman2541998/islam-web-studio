@@ -7,8 +7,11 @@ use App\Models\Role;
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -25,5 +28,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Role::class, RolePolicy::class);
         Blade::directive('t', fn ($expression) => '<?php echo e(\\App\\Support\\Studio::text('.$expression.')); ?>');
         Livewire::addPersistentMiddleware([SetLocale::class]);
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by($request->ip()));
+        RateLimiter::for('api-leads', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
     }
 }
