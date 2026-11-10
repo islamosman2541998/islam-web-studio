@@ -167,48 +167,10 @@ function pageVideos(signal){
         syncTime();
     });
 }
-function visitorTracking(signal,config){
-    if(!config.internal||!config.endpoint||navigator.globalPrivacyControl)return;
-    const uuid=()=>crypto.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:r&3|8).toString(16);});
-    const reset=String(config.reset||'1').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,80)||'1';
-    const visitorKey='studio-anonymous-visitor-'+reset,sessionKey='studio-anonymous-session-'+reset;
-    let visitorId=uuid(),sessionId=uuid();
-    try{
-        visitorId=sessionStorage.getItem(visitorKey)||visitorId;
-        sessionId=sessionStorage.getItem(sessionKey)||sessionId;
-        sessionStorage.setItem(visitorKey,visitorId);
-        sessionStorage.setItem(sessionKey,sessionId);
-    }catch{}
-    const pageviewId=uuid(),started=Date.now();
-    let maxScroll=0,formStarted=false,sentFinal=false;
-    const params=new URLSearchParams(location.search);
-    const base={visitor_id:visitorId,session_id:sessionId,pageview_id:pageviewId,path:location.pathname,title:document.title,referrer:document.referrer?new URL(document.referrer).origin:'',locale:document.documentElement.lang,language:navigator.language,viewport_width:innerWidth,viewport_height:innerHeight,utm_source:params.get('utm_source'),utm_medium:params.get('utm_medium'),utm_campaign:params.get('utm_campaign'),utm_content:params.get('utm_content'),utm_term:params.get('utm_term')};
-    const send=(payload,beacon=false)=>{const body=JSON.stringify({...base,...payload,_token:config.csrf});if(beacon&&navigator.sendBeacon){navigator.sendBeacon(config.endpoint,new Blob([body],{type:'application/json'}));return;}fetch(config.endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':config.csrf,'Accept':'application/json'},body,credentials:'same-origin',keepalive:true}).catch(()=>{});};
-    const activity=(final=false)=>{if(final&&sentFinal)return;sentFinal=sentFinal||final;send({type:'activity',duration:Math.min(86400,Math.round((Date.now()-started)/1000)),scroll_depth:maxScroll},final);};
-    const event=(name,label,target)=>send({type:'event',event_id:uuid(),event:name,label:(label||'').trim().slice(0,255),target_path:target||null});
-    send({type:'pageview'});
-    const onScroll=()=>{const available=Math.max(1,document.documentElement.scrollHeight-innerHeight);maxScroll=Math.max(maxScroll,Math.min(100,Math.round(scrollY/available*100)));};
-    window.addEventListener('scroll',onScroll,{signal,passive:true});
-    const interval=setInterval(()=>activity(),15000);
-    signal.addEventListener('abort',()=>{clearInterval(interval);activity(true);},{once:true});
-    document.addEventListener('visibilitychange',()=>{if(document.hidden)activity();},{signal});
-    window.addEventListener('pagehide',()=>activity(true),{signal,once:true});
-    document.addEventListener('click',e=>{const target=e.target.closest('a,button');if(!target)return;const href=target instanceof HTMLAnchorElement?target.href:'';const label=(target.getAttribute('aria-label')||target.textContent||'').trim();if(/^https?:\/\/(wa\.me|api\.whatsapp\.com)/i.test(href)||/^whatsapp:/i.test(href))event('whatsapp_click',label);else if(/^https?:/i.test(href)&&new URL(href).origin!==location.origin)event('outbound_click',label,new URL(href).pathname);else if(target instanceof HTMLAnchorElement&&target.hasAttribute('download'))event('download',label,new URL(href,location.href).pathname);else if(target.matches('.button,[data-cta]'))event('cta_click',label,target instanceof HTMLAnchorElement?new URL(href,location.href).pathname:null);},{signal});
-    document.addEventListener('focusin',e=>{if(!formStarted&&e.target.matches('form input,form select,form textarea')){formStarted=true;event('form_start',e.target.closest('form')?.getAttribute('aria-label')||'form');}},{signal});
-    document.addEventListener('submit',e=>event('form_submit',e.target.getAttribute('aria-label')||'form'),{signal});
-    document.querySelectorAll('video').forEach(video=>{video.addEventListener('play',()=>{if(video.dataset.analyticsPlayed!=='1'){video.dataset.analyticsPlayed='1';event('video_play',video.getAttribute('aria-label')||document.title);}},{signal});video.addEventListener('ended',()=>event('video_complete',video.getAttribute('aria-label')||document.title),{signal});});
-}
 function tracking(signal){
     const raw=document.getElementById('tracking-config');
     if(!raw)return;
     const config=JSON.parse(raw.textContent);
-    visitorTracking(signal,config);
-    const notice=document.getElementById('analytics-notice');
-    const noticeCookie='studio_analytics_notice';
-    const noticeSeen=document.cookie.split(';').map(part=>part.trim()).find(part=>part.startsWith(noticeCookie+'='))?.slice(noticeCookie.length+1);
-    const expectedNotice=String(config.reset||'1');
-    if(notice&&decodeURIComponent(noticeSeen||'')!==expectedNotice)notice.hidden=false;
-    notice?.querySelectorAll('[data-analytics-notice]').forEach(button=>button.addEventListener('click',()=>{document.cookie=noticeCookie+'='+encodeURIComponent(expectedNotice)+'; Path=/; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'');notice.hidden=true;},{signal}));
     if(!config.external)return;
     const banner=document.getElementById('tracking-consent');
     if(!banner)return;

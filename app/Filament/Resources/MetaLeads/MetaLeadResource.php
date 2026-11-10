@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\MetaLeads;
 
+use App\Filament\Resources\Leads\RelationManagers\MessagesRelationManager;
 use App\Filament\Resources\StudioResource;
 use App\Models\Lead;
+use App\Support\LeadMessageAction;
 use App\Support\ModuleRegistry;
 use App\Support\Studio;
 use Filament\Actions\DeleteAction;
@@ -134,8 +136,14 @@ class MetaLeadResource extends StudioResource
                 TrashedFilter::make(),
             ])
             ->recordActions([EditAction::make(), DeleteAction::make(), RestoreAction::make()])
+            ->toolbarActions([LeadMessageAction::bulk()])
             ->defaultSort('meta_created_at', 'desc')->paginated([10, 25, 50, 100])->striped()
             ->poll('30s')->emptyStateHeading(Studio::text('no_records'));
+    }
+
+    public static function getRelations(): array
+    {
+        return [MessagesRelationManager::class];
     }
 
     public static function getPages(): array

@@ -76,6 +76,8 @@ class MobileApiTest extends TestCase
             ->assertJsonPath('data.locale', 'en')
             ->assertJsonPath('data.locales', ['ar', 'en'])
             ->assertJsonPath('data.theme.colors.primary', '#0A3323')
+            ->assertJsonPath('data.theme.fonts.arabic', 'IBM Plex Sans Arabic')
+            ->assertJsonPath('data.theme.allow_switch', true)
             ->assertJsonPath('data.lead_form.services', [['id' => $service->id, 'name' => 'Web design']])
             ->assertJsonStructure(['data' => ['site' => ['name', 'tagline', 'website_url'], 'logos' => ['light', 'dark', 'icon'], 'contact' => ['email', 'phone', 'whatsapp', 'whatsapp_url'], 'socials']]);
     }

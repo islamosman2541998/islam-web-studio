@@ -19,6 +19,7 @@ use App\Models\Project;
 use App\Models\Service;
 use App\Models\Slider;
 use App\Models\Testimonial;
+use App\Support\FontRegistry;
 use App\Support\SettingsRegistry;
 use App\Support\Studio;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,11 @@ class AppController extends ApiController
             'socials' => $socials,
             'theme' => [
                 'default' => Studio::setting('design.default_theme', 'light') === 'dark' ? 'dark' : 'light',
+                'allow_switch' => (bool) Studio::setting('design.theme_switch', true),
+                'fonts' => [
+                    'arabic' => FontRegistry::arabic(Studio::setting('design.arabic_font')),
+                    'english' => FontRegistry::english(Studio::setting('design.english_font')),
+                ],
                 'colors' => collect(self::COLORS)->map(fn (string $fallback, string $key): string => Studio::color(Studio::setting('design.'.$key), $fallback)),
             ],
             'lead_form' => [

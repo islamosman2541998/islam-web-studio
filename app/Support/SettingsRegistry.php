@@ -96,10 +96,6 @@ class SettingsRegistry
                 'show_consent_banner' => ['bool', 'إظهار نافذة الموافقة لتشغيل Google وMeta وTikTok', 'Show consent banner for Google, Meta and TikTok', false],
                 'ga_id' => ['ga', 'معرّف Google Analytics', 'Google Analytics ID', ''], 'meta_id' => ['digits', 'معرّف Meta Pixel', 'Meta Pixel ID', ''], 'tiktok_id' => ['pixel', 'معرّف TikTok Pixel', 'TikTok Pixel ID', ''], 'head' => ['code', 'أكواد Head — للمالك فقط', 'Head code — owner only', ''], 'body' => ['code', 'أكواد Body — للمالك فقط', 'Body code — owner only', ''],
             ],
-            'analytics' => [
-                'enabled' => ['bool', 'تفعيل تحليلات الزوار الداخلية المجهولة بدون نافذة', 'Enable anonymous first-party analytics without a popup', true],
-                'retention_days' => ['integer', 'مدة الاحتفاظ ببيانات الزوار بالأيام', 'Visitor data retention in days', 180],
-            ],
             'home' => [
                 'intro_enabled' => ['bool', 'إظهار قسم نبذة الرئيسية', 'Show home introduction section', true],
                 'intro_media_enabled' => ['bool', 'إظهار جزء الصورة', 'Show image panel', true],

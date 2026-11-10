@@ -23,6 +23,11 @@ class LeadResource extends StudioResource
         });
     }
 
+    public static function getRelations(): array
+    {
+        return [RelationManagers\MessagesRelationManager::class];
+    }
+
     public static function getPages(): array
     {
         return ['index' => Pages\ListRecords::route('/'), 'create' => Pages\CreateRecord::route('/create'), 'edit' => Pages\EditRecord::route('/{record}/edit')];

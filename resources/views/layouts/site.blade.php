@@ -30,7 +30,7 @@ $favicon=$seo['logo']?:\App\Models\Asset::publicImage(Studio::setting('general.f
 @include('site.partials.footer')
 @include('site.partials.whatsapp-float')
 <dialog class="lightbox" id="gallery-lightbox" aria-label="{{ \App\Support\Studio::text('project_gallery') }}"><div class="lightbox-head"><span></span><button type="button" class="lightbox-close" aria-label="{{ \App\Support\Studio::text('close') }}">×</button></div><div class="lightbox-content"></div><div class="lightbox-controls"><button type="button" data-lightbox-prev aria-label="{{ \App\Support\Studio::text('previous') }}">←</button><span data-lightbox-count></span><button type="button" data-lightbox-next aria-label="{{ \App\Support\Studio::text('next') }}">→</button></div></dialog>
-@if((\App\Support\Studio::setting('scripts.enabled',false)||\App\Support\Studio::setting('analytics.enabled',true))&&!config('studio.demo'))@include('site.partials.consent')@endif
+@if(\App\Support\Studio::setting('scripts.enabled',false)&&!config('studio.demo'))@include('site.partials.consent')@endif
 @include('site.partials.toasts')
 @livewireScripts
 </body></html>

@@ -64,6 +64,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Livewire;
@@ -316,6 +317,24 @@ class StudioFeatureTest extends TestCase
         $this->get('/robots.txt')->assertSee('Allow: /')->assertSee('Sitemap: ');
         $this->get('/ar')->assertSee('content="index,follow', false)->assertDontSee('noindex', false);
         Livewire::actingAs($this->owner())->test(StudioSettings::class)->assertDontSee($warning);
+    }
+
+    public function test_site_has_no_internal_visitor_analytics_notice_or_dashboard(): void
+    {
+        config(['studio.demo' => false]);
+
+        $this->get('/ar')->assertOk()
+            ->assertDontSee('analytics-notice', false)
+            ->assertDontSee('tracking-config', false);
+        $this->assertFalse(Route::has('analytics.collect'));
+        $this->actingAs($this->owner())->get('/admin/visitor-analytics')->assertNotFound();
+
+        Studio::put('scripts.enabled', true, 'scripts');
+        Studio::put('scripts.show_consent_banner', true, 'scripts');
+
+        $this->get('/ar')->assertOk()
+            ->assertSee('id="tracking-consent"', false)
+            ->assertDontSee('analytics-notice', false);
     }
 
     public function test_google_metadata_uses_managed_home_settings_and_complete_structured_data(): void

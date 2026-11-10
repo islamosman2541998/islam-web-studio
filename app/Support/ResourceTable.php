@@ -124,6 +124,9 @@ class ResourceTable
             }
         }
         $toolbar = $bulk ? [BulkActionGroup::make($bulk)] : [];
+        if ($module === 'leads') {
+            $toolbar[] = LeadMessageAction::bulk();
+        }
         if (! $readonly) {
             $toolbar[] = Action::make('export')->label(Studio::text('export_excel'))->icon('heroicon-o-arrow-down-tray')->visible(fn () => ModuleRegistry::permission($module, 'export'))->schema([Select::make('locale')->label(Studio::text('language'))->options(['ar' => 'العربية', 'en' => 'English', 'both' => 'العربية + English'])->default('both')->required()])->action(function (array $data, $livewire) use ($module) {
                 abort_unless(ModuleRegistry::permission($module, 'export'), 403);
